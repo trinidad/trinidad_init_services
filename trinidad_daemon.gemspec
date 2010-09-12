@@ -55,7 +55,7 @@ Gem::Specification.new do |s|
     README
     Rakefile
     bin/trinidad_daemon_install
-    init.d/trinidad_daemon.sh.erb
+    init.d/trinidad-daemon.sh.erb
     lib/trinidad_daemon.rb
     lib/trinidad_daemon/configuration.rb
     trinidad-libs/commons-daemon.jar
