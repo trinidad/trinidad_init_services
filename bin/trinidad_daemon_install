@@ -1,0 +1,8 @@
+#!/usr/bin/env jruby
+
+__LIB_DIR__ = File.expand_path('../lib', File.dirname(__FILE__))
+$LOAD_PATH.unshift(__LIB_DIR__) unless $LOAD_PATH.include? __LIB_DIR__
+
+require 'trinidad_daemon/configuration'
+
+Trinidad::Daemon::Configuration.new.configure

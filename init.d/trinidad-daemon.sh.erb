@@ -1,0 +1,126 @@
+#! /bin/sh
+# Generic script for running ruby scripts as daemons using
+# jsvc and a java class to control the daemon.
+#
+# Contains common parameters and start/stop
+
+# Things you'll need to set on a per script/daemon basis:
+# SCRIPT_NAME - Path to the ruby script which creates a Daemon
+# object for jsvc to control
+# APP_NAME - Name of your application
+#
+# Things you can set:
+# PROG_OPTS - Arguments to send to the program. A few defaults are appended to this.
+
+JSVC=<%= @jsvc %>
+JAVA_HOME=<%= @java_home %>
+JRUBY_HOME=<%= @jruby_home %>
+APP_PATH=<%= @app_path %>
+RUBY_SCRIPT=<%= @trinidad_daemon_path %>
+JRUBY_JSVC_JAR=<%= "#{@jars_path}/jruby-jsvc.jar" %>
+DAEMON_JAR=<%= "#{@jars_path}/commons-daemon.jar" %>
+BSF_JAR=<%= "#{@jars_path}/bsf.jar" %>
+
+# Add here the options that Trinidad needs to run your application,
+# but DO NOT delete the -d option, i.e -e production
+TRINIDAD_OPTS="-d $APP_PATH"
+
+PIDFILE=<%= @pid_file %>
+LOG_FILE=<%= @log_file %>
+
+# Implements the jsvc Daemon interface.
+MAIN_CLASS=com.msp.jsvc.JRubyDaemon
+
+CLASSPATH=$JRUBY_HOME/lib/jruby.jar:$JRUBY_HOME/lib/profile.jar:$DAEMON_JAR:$JRUBY_JSVC_JAR
+
+echo "CLASSPATH  : $CLASSPATH"
+
+# TODO: Allow configuration or detect from the OS
+JAVA_NATIVE_PROPS="-Djna.boot.library.path=$JRUBY_HOME/lib/native/linux-i386:$JRUBY_HOME/lib/native/linux-amd64 \
+-Djffi.boot.library.path=$JRUBY_HOME/lib/native/i386-Linux:$JRUBY_HOME/lib/native/s390x-Linux:$JRUBY_HOME/lib/native/x86_64-Linux"
+
+JAVA_PROPS="$JAVA_PROPS -Djruby.memory.max=500m \
+-Djruby.stack.max=1024k \
+$JAVA_NATIVE_PROPS \
+-Djruby.home=$JRUBY_HOME \
+-Djruby.lib=$JRUBY_HOME/lib \
+-Djruby.script=jruby \
+-Djruby.shell=/bin/sh
+-Djruby.daemon.module.name=Trinidad"
+
+JAVA_OPTS="-Xmx500m -Xss1024k -Xbootclasspath/a:$JRUBY_HOME/lib/jruby.jar"
+
+JSVC_ARGS="-home $JAVA_HOME \
+$JSVC_ARGS_EXTRA \
+-wait 20 \
+-pidfile $PIDFILE \
+-user $USER \
+-procname jsvc-$SCRIPT_NAME \
+-jvm server
+-outfile $LOG_FILE \
+-errfile &1"
+
+#
+# Stop/Start
+#
+
+STOP_COMMAND="$JSVC $JSVC_ARGS -stop $MAIN_CLASS"
+START_COMMAND="$JSVC $JSVC_ARGS -cp $CLASSPATH $JAVA_PROPS $JAVA_OPTS $MAIN_CLASS $RUBY_SCRIPT $TRINIDAD_OPTS"
+
+case "$1" in
+    start)
+      if [ -e "$PIDFILE" ]; then
+          echo "Pidfile already exists, not starting."
+          exit 1
+      else
+          echo "Starting $SCRIPT_NAME daemon..."
+          $START_COMMAND
+          EXIT_CODE=$?
+          if [ "$EXIT_CODE" != 0 ]; then
+        echo "Daemon exited with status: $EXIT_CODE. Check pidfile and log"
+          fi
+      fi
+      ;;
+    stop)
+      if [ -e "$PIDFILE" ]; then
+          echo "Stopping $SCRIPT_NAME daemon..."
+          $STOP_COMMAND
+      else
+          echo "No pid file, not stopping."
+          exit 1
+      fi
+      ;;
+    restart)
+      if [ -e "$PIDFILE" ]; then
+          echo "Stopping $SCRIPT_NAME daemon..."
+          $STOP_COMMAND
+      fi
+      if [ -e "$PIDFILE" ]; then
+          echo "Pidfile still present, $SCRIPT_NAME hasn't stopped"
+          exit 1
+      else
+          $START_COMMAND
+          EXIT_CODE=$?
+          if [ "$EXIT_CODE" != 0 ]; then
+        echo "Daemon exited with status: $EXIT_CODE. Check pidfile and log"
+          fi
+      fi
+      ;;
+    status)
+      if [ "$PIDFILE" ]; then
+          PID=`cat $PIDFILE`
+          OUTPUT=`ps $PID | egrep "^$PID "`
+          if [ ${#OUTPUT} -gt 0 ]; then
+        echo "Service running with pid: $PID"
+          else
+        echo "Pidfile present, but process not running"
+          fi
+      else
+          echo "No pidfile present"
+      fi
+      ;;
+    *)
+      echo "Unrecognised command. Usage trinidad-daemon [ start | stop | restart ]"
+      ;;
+esac
+
