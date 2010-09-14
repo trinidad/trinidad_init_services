@@ -19,7 +19,6 @@ APP_PATH=<%= @app_path %>
 RUBY_SCRIPT=<%= @trinidad_daemon_path %>
 JRUBY_JSVC_JAR=<%= "#{@jars_path}/jruby-jsvc.jar" %>
 DAEMON_JAR=<%= "#{@jars_path}/commons-daemon.jar" %>
-BSF_JAR=<%= "#{@jars_path}/bsf.jar" %>
 
 # Add here the options that Trinidad needs to run your application,
 # but DO NOT delete the -d option, i.e -e production
@@ -32,8 +31,6 @@ LOG_FILE=<%= @log_file %>
 MAIN_CLASS=com.msp.jsvc.JRubyDaemon
 
 CLASSPATH=$JRUBY_HOME/lib/jruby.jar:$JRUBY_HOME/lib/profile.jar:$DAEMON_JAR:$JRUBY_JSVC_JAR
-
-echo "CLASSPATH  : $CLASSPATH"
 
 # TODO: Allow configuration or detect from the OS
 JAVA_NATIVE_PROPS="-Djna.boot.library.path=$JRUBY_HOME/lib/native/linux-i386:$JRUBY_HOME/lib/native/linux-amd64 \
