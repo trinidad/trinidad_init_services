@@ -11,6 +11,7 @@ module Trinidad
 
       def configure
         @app_path = File.expand_path(ask('Application path?'))
+				@trinidad_options = ask('Trinidad options?', '-e production')
         @jsvc = ask('Jsvc path?', `which jsvc`.chomp)
         @java_home = ask('Java home?', default_java_home)
         @jruby_home = ask('JRuby home?', default_jruby_home)
@@ -23,11 +24,11 @@ module Trinidad
 
         daemon = ERB.new(
           File.read(
-            File.expand_path('../../init.d/trinidad_daemon.sh.erb', File.dirname(__FILE__))
+            File.expand_path('../../init.d/trinidad-daemon.sh.erb', File.dirname(__FILE__))
           )
         ).result(binding)
 
-        tmp_file = "#{ENV['TMP_DIR']}/trinidad-daemon.sh"
+        tmp_file = "#{ENV['TMP_DIR'] || '/tmp'}/trinidad-daemon.sh"
         File.open(tmp_file, 'w') do |file|
           file.write(daemon)
         end

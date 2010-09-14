@@ -23,7 +23,7 @@ BSF_JAR=<%= "#{@jars_path}/bsf.jar" %>
 
 # Add here the options that Trinidad needs to run your application,
 # but DO NOT delete the -d option, i.e -e production
-TRINIDAD_OPTS="-d $APP_PATH"
+TRINIDAD_OPTS="-d $APP_PATH <%= @trinidad_options %>"
 
 PIDFILE=<%= @pid_file %>
 LOG_FILE=<%= @log_file %>
