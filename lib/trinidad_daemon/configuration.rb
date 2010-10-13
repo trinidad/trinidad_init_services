@@ -24,11 +24,11 @@ module Trinidad
 
         daemon = ERB.new(
           File.read(
-            File.expand_path('../../init.d/trinidad-daemon.sh.erb', File.dirname(__FILE__))
+            File.expand_path('../../init.d/trinidad.erb', File.dirname(__FILE__))
           )
         ).result(binding)
 
-        tmp_file = "#{ENV['TMP_DIR'] || '/tmp'}/trinidad-daemon.sh"
+        tmp_file = "#{ENV['TMP_DIR'] || '/tmp'}/trinidad"
         File.open(tmp_file, 'w') do |file|
           file.write(daemon)
         end
