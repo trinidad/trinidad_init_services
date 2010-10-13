@@ -38,7 +38,7 @@ When the installation process finishes you can use the script trinidad-daemon.sh
 generated to launch the server as a daemon with the options start|stop|restart,
 i.e:
 
-    $ /etc/init.d/trinidad-daemon.sh restart
+    $ /etc/init.d/trinidad restart
 
 == Copyright
 
