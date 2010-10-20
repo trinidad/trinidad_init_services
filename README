@@ -9,7 +9,7 @@ are finding with the current forking process.
 Dependencies
 ============
 
-The Jsvc binary file is required, but it's already available for all the
+The Jsvc native binary file is required, but it's already available for all the
 platforms supported as a bundled package, i.e:
 
     Debian/Ubuntu:
@@ -17,7 +17,8 @@ platforms supported as a bundled package, i.e:
     Mac OS X:
         $ brew install jsvc
 
-Those binaries are also available in the Apache distribution directory:
+Those binaries are also available in the Apache distribution directory, if
+you install it from this directory you must ensure it's in your path:
 
 http://www.apache.org/dist/commons/daemon/binaries/1.0.3/
 
