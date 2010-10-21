@@ -34,7 +34,7 @@ module Trinidad
         end
 
         puts "Moving trinidad-daemon.sh to #{@output_path}"
-        `cp #{tmp_file} #{@output_path}`
+        `cp #{tmp_file} #{@output_path} && chmod u+x #{@output_path}`
         puts 'Done.'
       end
 
