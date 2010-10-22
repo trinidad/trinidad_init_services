@@ -11,7 +11,7 @@ module Trinidad
 
       def configure
         @app_path = File.expand_path(ask('Application path?'))
-				@trinidad_options = ask('Trinidad options?', '-e production')
+        @trinidad_options = ask('Trinidad options?', '-e production')
         @jsvc = ask('Jsvc path?', `which jsvc`.chomp)
         @java_home = ask('Java home?', default_java_home)
         @jruby_home = ask('JRuby home?', default_jruby_home)
@@ -33,7 +33,7 @@ module Trinidad
           file.write(daemon)
         end
 
-        puts "Moving trinidad-daemon.sh to #{@output_path}"
+        puts "Moving trinidad to #{@output_path}"
         `cp #{tmp_file} #{@output_path} && chmod u+x #{@output_path}`
         puts 'Done.'
       end
