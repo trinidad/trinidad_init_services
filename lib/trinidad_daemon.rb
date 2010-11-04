@@ -19,6 +19,7 @@ module Trinidad
     end
 
     def stop
+      @server.tomcat.stop
       @server.tomcat.destroy
     end
 
