@@ -10,14 +10,14 @@ module Trinidad
       end
 
       def configure
-        @app_path = File.expand_path(ask('Application path?'))
+        @app_path = ask_path('Application path?')
         @trinidad_options = ask('Trinidad options?', '-e production')
-        @jsvc = ask('Jsvc path?', `which jsvc`.chomp)
-        @java_home = ask('Java home?', default_java_home)
-        @jruby_home = ask('JRuby home?', default_jruby_home)
-        @output_path = ask('init.d output path?', '/etc/init.d')
-        @pid_file = ask('pid file?', '/var/run/trinidad/trinidad.pid')
-        @log_file = ask('log file?', '/var/log/trinidad/trinidad.log')
+        @jsvc = ask_path('Jsvc path?', `which jsvc`.chomp)
+        @java_home = ask_path('Java home?', default_java_home)
+        @jruby_home = ask_path('JRuby home?', default_jruby_home)
+        @output_path = ask_path('init.d output path?', '/etc/init.d')
+        @pid_file = ask_path('pid file?', '/var/run/trinidad/trinidad.pid')
+        @log_file = ask_path('log file?', '/var/log/trinidad/trinidad.log')
 
         @trinidad_daemon_path = File.expand_path('../../trinidad_daemon.rb', __FILE__)
         @jars_path = File.expand_path('../../../trinidad-libs', __FILE__)
@@ -45,6 +45,10 @@ module Trinidad
 
       def default_java_home
         Java::JavaLang::System.get_property("java.home")
+      end
+
+      def ask_path(question, default = nil)
+        File.expand_path(ask(question, default))
       end
 
       def ask(question, default = nil)
