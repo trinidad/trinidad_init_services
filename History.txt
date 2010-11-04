@@ -1,3 +1,8 @@
+== 0.3.1
+
+* Use absolute path for configuration options
+* Start Trinidad from the application path
+
 == 0.3.0
 
 * Remove init script extension
