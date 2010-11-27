@@ -30,7 +30,7 @@ LOG_FILE=<%= @log_file %>
 # Implements the jsvc Daemon interface.
 MAIN_CLASS=com.msp.jsvc.JRubyDaemon
 
-CLASSPATH=$JRUBY_HOME/lib/jruby.jar:$JRUBY_HOME/lib/profile.jar:$DAEMON_JAR:$JRUBY_JSVC_JAR
+CLASSPATH=$JRUBY_HOME/lib/jruby.jar:<%= @profiler_classpath %>$DAEMON_JAR:$JRUBY_JSVC_JAR
 
 # TODO: Allow configuration or detect from the OS
 JAVA_NATIVE_PROPS="-Djna.boot.library.path=$JRUBY_HOME/lib/native/linux-i386:$JRUBY_HOME/lib/native/linux-amd64 \
