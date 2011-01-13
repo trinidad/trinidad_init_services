@@ -20,7 +20,7 @@ RUBY_SCRIPT=<%= @trinidad_daemon_path %>
 
 # Add here the options that Trinidad needs to run your application,
 # but DO NOT delete the -d option, i.e -e production
-TRINIDAD_OPTS="<%= @trinidad_options %>"
+TRINIDAD_OPTS="<%= @trinidad_options.join(" ") %>"
 
 PIDFILE=<%= @pid_file %>
 LOG_FILE=<%= @log_file %>
@@ -37,11 +37,8 @@ JAVA_NATIVE_PROPS="-Djna.boot.library.path=$JRUBY_HOME/lib/native/linux-i386:$JR
 JAVA_PROPS="$JAVA_PROPS -Djruby.memory.max=500m \
 -Djruby.stack.max=1024k \
 $JAVA_NATIVE_PROPS \
--Djruby.home=$JRUBY_HOME \
--Djruby.lib=$JRUBY_HOME/lib \
--Djruby.script=jruby \
--Djruby.shell=/bin/sh
--Djruby.daemon.module.name=Trinidad"
+-Djruby.shell=/bin/sh \
+<%= @jruby_opts.join(' ') %>"
 
 JAVA_OPTS="-Xmx500m -Xss1024k -Xbootclasspath/a:$JRUBY_HOME/lib/jruby.jar"
 

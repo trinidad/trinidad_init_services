@@ -12,20 +12,26 @@ module Trinidad
 
       def configure
         @app_path = ask_path('Application path?')
-        @trinidad_options = "-d #{@app_path}"
-        @trinidad_options << ask('Trinidad options?', '-e production')
+        @trinidad_options = ["-d #{@app_path}"]
+        options_ask = 'Trinidad options?'
+        options_ask << '(separated by `;`)' if windows?
+        @trinidad_options << ask(options_ask, '-e production')
 
         @jruby_home = ask_path('JRuby home?', default_jruby_home)
+        @jruby_opts = ["-Djruby.home=#{@jruby_home}", "-Djruby.lib=#{File.join(@jruby_home, 'lib')}",
+          "-Djruby.script=jruby", "-Djruby.daemon.module.name=Trinidad"]
 
-        @pid_file = ask_path('pid file?', '/var/run/trinidad/trinidad.pid')
+        default_pid = 'trinidad.pid'
+        default_pid = "/var/run/trinidad/#{default_pid}" unless windows?
+        @pid_file = ask_path('pid file?', default_pid)
 
         @trinidad_daemon_path = File.expand_path('../../trinidad_daemon.rb', __FILE__)
         @jars_path = File.expand_path('../../../trinidad-libs', __FILE__)
 
         @classpath = ['jruby-jsvc.jar', 'commons-daemon.jar'].map {|jar| File.join(@jars_path, jar)}
-        @classpath << File.join(@jruby_home, 'lib', 'jruby.org')
+        @classpath << File.join(@jruby_home, 'lib', 'jruby.jar')
 
-        if RbConfig::CONFIG['host_os'] =~ /mswin|mingw/
+        if windows?
           configure_windows_service
         else
           configure_unix_daemon
@@ -59,9 +65,12 @@ module Trinidad
         prunsrv = File.join(@jars_path, 'prunsrv.exe')
         command = %Q{//IS//Trinidad --DisplayName="Trinidad" \
 --Install="#{prunsrv}" --Jvm=auto --StartMode=jvm --StopMode=jvm \
---StartClass=com.msp.jsvc.JRubyDaemon --StartParams="#{@trinidad_daemon_path};#{@trinidad_options}" \
---StopClass=com.msp.jsvc.JRubyDaemon --Classpath="#{@classpath.join(";")}" \
---PidFile="#{@pid_file}" --LogPrefix="trinidad"
+--StartClass=com.msp.procrun.JRubyService --StartMethod=start \
+--StartParams="#{@trinidad_daemon_path};#{@trinidad_options.join(";")}" \
+--StopClass=com.msp.procrun.JRubyService --StopMethod=stop --Classpath="#{@classpath.join(";")}" \
+--StdOutput=auto --StdError=auto \
+--PidFile="#{@pid_file}" --LogPrefix="trinidad" \
+++JvmOptions="#{@jruby_opts.join(";")}"
 }
         system "#{prunsrv} #{command}"
       end
@@ -75,9 +84,8 @@ module Trinidad
         Java::JavaLang::System.get_property("java.home")
       end
 
-      # JRuby versions prior to v1.5.5 required an external profile.jar
-      def should_use_profile_jar?
-        JRUBY_VERSION.gsub(".", '').to_i < 155
+      def windows?
+        RbConfig::CONFIG['host_os'] =~ /mswin|mingw/
       end
 
       def ask_path(question, default = nil)
