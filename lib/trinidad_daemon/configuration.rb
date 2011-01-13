@@ -38,6 +38,7 @@ module Trinidad
         @java_home = ask_path('Java home?', default_java_home)
         @output_path = ask_path('init.d output path?', '/etc/init.d')
         @log_file = ask_path('log file?', '/var/log/trinidad/trinidad.log')
+        @profiler_classpath = should_use_profile_jar? ? '$JRUBY_HOME/lib/profile.jar:' : ''
 
         daemon = ERB.new(
           File.read(
@@ -71,6 +72,11 @@ module Trinidad
 
       def default_java_home
         Java::JavaLang::System.get_property("java.home")
+      end
+
+      # JRuby versions prior to v1.5.5 required an external profile.jar
+      def should_use_profile_jar?
+        JRUBY_VERSION.gsub(".", '').to_i < 155
       end
 
       def ask_path(question, default = nil)
