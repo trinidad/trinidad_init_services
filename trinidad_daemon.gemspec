@@ -14,7 +14,7 @@ Gem::Specification.new do |s|
   ## the sub! line in the Rakefile
   s.name              = 'trinidad_daemon'
   s.version           = '0.3.1'
-  s.date              = '2010-11-04'
+  s.date              = '2011-01-13'
   s.rubyforge_project = 'trinidad_daemon'
 
   ## Make sure your summary is short. The description may be as long
@@ -61,6 +61,7 @@ Gem::Specification.new do |s|
     lib/trinidad_daemon/configuration.rb
     trinidad-libs/commons-daemon.jar
     trinidad-libs/jruby-jsvc.jar
+    trinidad-libs/prunsrv.exe
     trinidad_daemon.gemspec
   ]
   # = MANIFEST =

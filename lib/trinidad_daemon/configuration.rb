@@ -2,6 +2,7 @@ module Trinidad
   module Daemon
     require 'erb'
     require 'java'
+    require 'rbconfig'
 
     class Configuration
       def initialize(stdin = STDIN, stdout = STDOUT)
@@ -12,15 +13,31 @@ module Trinidad
       def configure
         @app_path = ask_path('Application path?')
         @trinidad_options = ask('Trinidad options?', '-e production')
-        @jsvc = ask_path('Jsvc path?', `which jsvc`.chomp)
-        @java_home = ask_path('Java home?', default_java_home)
+
         @jruby_home = ask_path('JRuby home?', default_jruby_home)
-        @output_path = ask_path('init.d output path?', '/etc/init.d')
+
         @pid_file = ask_path('pid file?', '/var/run/trinidad/trinidad.pid')
-        @log_file = ask_path('log file?', '/var/log/trinidad/trinidad.log')
 
         @trinidad_daemon_path = File.expand_path('../../trinidad_daemon.rb', __FILE__)
         @jars_path = File.expand_path('../../../trinidad-libs', __FILE__)
+
+        @classpath = ['jruby-jsvc.jar', 'commons-daemon.jar'].map {|jar| File.join(@jars_path, jar)}
+        @classpath << File.join(@jruby_home, 'lib', 'jruby.org')
+
+        if RbConfig::CONFIG['host_os'] =~ /mswin|mingw/
+          configure_windows_service
+        else
+          configure_unix_daemon
+        end
+
+        puts 'Done.'
+      end
+
+      def configure_unix_daemon
+        @jsvc = ask_path('Jsvc path?', `which jsvc`.chomp)
+        @java_home = ask_path('Java home?', default_java_home)
+        @output_path = ask_path('init.d output path?', '/etc/init.d')
+        @log_file = ask_path('log file?', '/var/log/trinidad/trinidad.log')
 
         daemon = ERB.new(
           File.read(
@@ -35,7 +52,16 @@ module Trinidad
 
         puts "Moving trinidad to #{@output_path}"
         `cp #{tmp_file} #{@output_path} && chmod u+x #{@output_path}`
-        puts 'Done.'
+      end
+
+      def configure_windows_service
+        prunsrv = File.join(@jars_path, 'prunsrv.exe')
+        command = %Q{//IS//Trinidad --DisplayName="Trinidad" \
+--StartClass=com.msp.jsvc.JRubyDaemon --StartParams="#{@trinidad_daemon_path};#{@trinidad_options}" \
+--StopClass=com.msp.jsvc.JRubyDaemon --Classpath="#{@classpath.join(";")}" \
+--PidFile="#{@pid_file}" --LogPrefix="trinidad"
+}
+        `"#{prunsrv} #{command}"`
       end
 
       private
