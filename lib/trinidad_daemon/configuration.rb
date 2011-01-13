@@ -17,7 +17,7 @@ module Trinidad
         options_default = '-e production'
         if windows?
           options_ask << '(separated by `;`)'
-          options_default = nil
+          options_default = ''
         end
         @trinidad_options << ask(options_ask, options_default)
 
