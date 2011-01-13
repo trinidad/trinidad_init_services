@@ -1,3 +1,7 @@
+== 0.4.0 (2011-01-13)
+
+* Generate Windows service.
+
 == 0.3.2
 
 * Remove profile.jar from init script since it's no more bundled with JRuby distribution.
