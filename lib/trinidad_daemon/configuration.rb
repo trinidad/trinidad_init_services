@@ -12,7 +12,8 @@ module Trinidad
 
       def configure
         @app_path = ask_path('Application path?')
-        @trinidad_options = ask('Trinidad options?', '-e production')
+        @trinidad_options = "-d #{@app_path}"
+        @trinidad_options << ask('Trinidad options?', '-e production')
 
         @jruby_home = ask_path('JRuby home?', default_jruby_home)
 
@@ -38,7 +39,6 @@ module Trinidad
         @java_home = ask_path('Java home?', default_java_home)
         @output_path = ask_path('init.d output path?', '/etc/init.d')
         @log_file = ask_path('log file?', '/var/log/trinidad/trinidad.log')
-        @profiler_classpath = should_use_profile_jar? ? '$JRUBY_HOME/lib/profile.jar:' : ''
 
         daemon = ERB.new(
           File.read(
@@ -58,11 +58,12 @@ module Trinidad
       def configure_windows_service
         prunsrv = File.join(@jars_path, 'prunsrv.exe')
         command = %Q{//IS//Trinidad --DisplayName="Trinidad" \
+--Install="#{prunsrv}" --Jvm=auto --StartMode=jvm --StopMode=jvm \
 --StartClass=com.msp.jsvc.JRubyDaemon --StartParams="#{@trinidad_daemon_path};#{@trinidad_options}" \
 --StopClass=com.msp.jsvc.JRubyDaemon --Classpath="#{@classpath.join(";")}" \
 --PidFile="#{@pid_file}" --LogPrefix="trinidad"
 }
-        `"#{prunsrv} #{command}"`
+        system "#{prunsrv} #{command}"
       end
 
       private
