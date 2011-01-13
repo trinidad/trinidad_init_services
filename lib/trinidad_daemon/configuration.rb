@@ -14,16 +14,16 @@ module Trinidad
         @app_path = ask_path('Application path?')
         @trinidad_options = ["-d #{@app_path}"]
         options_ask = 'Trinidad options?'
-        options_ask << '(separated by `;`)' if windows?
-        @trinidad_options << ask(options_ask, '-e production')
+        options_default = '-e production'
+        if windows?
+          options_ask << '(separated by `;`)'
+          options_default = nil
+        end
+        @trinidad_options << ask(options_ask, options_default)
 
         @jruby_home = ask_path('JRuby home?', default_jruby_home)
         @jruby_opts = ["-Djruby.home=#{@jruby_home}", "-Djruby.lib=#{File.join(@jruby_home, 'lib')}",
           "-Djruby.script=jruby", "-Djruby.daemon.module.name=Trinidad"]
-
-        default_pid = 'trinidad.pid'
-        default_pid = "/var/run/trinidad/#{default_pid}" unless windows?
-        @pid_file = ask_path('pid file?', default_pid)
 
         @trinidad_daemon_path = File.expand_path('../../trinidad_daemon.rb', __FILE__)
         @jars_path = File.expand_path('../../../trinidad-libs', __FILE__)
@@ -44,6 +44,7 @@ module Trinidad
         @jsvc = ask_path('Jsvc path?', `which jsvc`.chomp)
         @java_home = ask_path('Java home?', default_java_home)
         @output_path = ask_path('init.d output path?', '/etc/init.d')
+        @pid_file = ask_path('pid file?', '/var/run/trinidad/trinidad.pid')
         @log_file = ask_path('log file?', '/var/log/trinidad/trinidad.log')
 
         daemon = ERB.new(
@@ -69,7 +70,7 @@ module Trinidad
 --StartParams="#{@trinidad_daemon_path};#{@trinidad_options.join(";")}" \
 --StopClass=com.msp.procrun.JRubyService --StopMethod=stop --Classpath="#{@classpath.join(";")}" \
 --StdOutput=auto --StdError=auto \
---PidFile="#{@pid_file}" --LogPrefix="trinidad" \
+--LogPrefix="trinidad" \
 ++JvmOptions="#{@jruby_opts.join(";")}"
 }
         system "#{prunsrv} #{command}"
