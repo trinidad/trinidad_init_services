@@ -6,22 +6,6 @@ Trinidad's daemon library based on Apache Commons Daemon and JRuby-jsvc.
 It should replace the daemon_extension in a near future due to the problem we
 are finding with the current forking process.
 
-Dependencies
-============
-
-The Jsvc native binary file is required, but it's already available for all the
-platforms supported as a bundled package, i.e:
-
-    Debian/Ubuntu:
-        $ sudo apt-get install jsvc
-    Mac OS X:
-        $ brew install jsvc
-
-Those binaries are also available in the Apache distribution directory, if
-you install it from this directory you must ensure it's in your path:
-
-http://www.apache.org/dist/commons/daemon/binaries/1.0.3/
-
 Installation
 ============
 
@@ -30,17 +14,46 @@ When the gem is installed the user must launch the installation process:
     $ jruby -S trinidad_daemon_install
 
 This installer guides you through the configuration process and generates a
-init.d script for your platform.
+init.d script if you are on a unix system or creates the service if you are
+on a windows box.
 
-Execution
-=========
+Unix
+====
 
-When the installation process finishes you can use the script trinidad-daemon.sh
-generated to launch the server as a daemon with the options start|stop|restart,
-i.e:
+  Dependencies
+  ============
 
-    $ /etc/init.d/trinidad restart
+  The Jsvc native binary file is required, but it's already available for all the
+  platforms supported as a bundled package, i.e:
+
+      Debian/Ubuntu:
+          $ sudo apt-get install jsvc
+      Mac OS X:
+          $ brew install jsvc
+
+  Those binaries are also available in the Apache distribution directory, if
+  you install it from this directory you must ensure it's in your path:
+
+  http://www.apache.org/dist/commons/daemon/binaries/
+
+  Execution
+  =========
+
+  When the installation process finishes you can use the script trinidad-daemon.sh
+  generated to launch the server as a daemon with the options start|stop|restart,
+  i.e:
+
+      $ /etc/init.d/trinidad restart
+
+Windows
+=======
+
+  Execution
+  =========
+
+  Open the `Services` panel under `Administrative Tools` and look for a
+  service called `Trinidad`.
 
 == Copyright
 
-Copyright (c) 2010 David Calavera<calavera@apache.org>. See LICENSE for details.
+Copyright (c) 2011 David Calavera<calavera@apache.org>. See LICENSE for details.
