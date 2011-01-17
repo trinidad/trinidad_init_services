@@ -3,6 +3,7 @@ module Trinidad
     require 'erb'
     require 'java'
     require 'rbconfig'
+    require 'fileutils'
 
     class Configuration
       def initialize(stdin = STDIN, stdout = STDOUT)
@@ -53,13 +54,13 @@ module Trinidad
           )
         ).result(binding)
 
-        tmp_file = "#{ENV['TMP_DIR'] || '/tmp'}/trinidad"
+        puts "Moving trinidad to #{@output_path}"
+        tmp_file = "#{@output_path}/trinidad"
         File.open(tmp_file, 'w') do |file|
           file.write(daemon)
         end
 
-        puts "Moving trinidad to #{@output_path}"
-        `cp #{tmp_file} #{@output_path} && chmod u+x #{@output_path}`
+        FileUtils.chmod(0744, tmp_file)
       end
 
       def configure_windows_service
