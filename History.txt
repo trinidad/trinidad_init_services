@@ -1,3 +1,7 @@
+== 0.4.1 (2011-01-18)
+
+* Ensure the unix script is executable by default.
+
 == 0.4.0 (2011-01-13)
 
 * Generate Windows service.
