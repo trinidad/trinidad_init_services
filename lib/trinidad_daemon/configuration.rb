@@ -19,6 +19,9 @@ module Trinidad
         if windows?
           options_ask << '(separated by `;`)'
           options_default = ''
+          name_ask = 'Service name? {Alphanumeric and spaces only}'
+          name_default = 'Trinidad'
+          @trinidad_name = ask(name_ask, name_default)
         end
         @trinidad_options << ask(options_ask, options_default)
 
@@ -65,13 +68,13 @@ module Trinidad
 
       def configure_windows_service
         prunsrv = File.join(@jars_path, 'prunsrv.exe')
-        command = %Q{//IS//Trinidad --DisplayName="Trinidad" \
+        command = %Q{//IS//Trinidad --DisplayName="#{@trinidad_name}" \
 --Install="#{prunsrv}" --Jvm=auto --StartMode=jvm --StopMode=jvm \
 --StartClass=com.msp.procrun.JRubyService --StartMethod=start \
 --StartParams="#{@trinidad_daemon_path};#{@trinidad_options.join(";")}" \
 --StopClass=com.msp.procrun.JRubyService --StopMethod=stop --Classpath="#{@classpath.join(";")}" \
 --StdOutput=auto --StdError=auto \
---LogPrefix="trinidad" \
+--LogPrefix="#{@trinidad_name.downcase.gsub(/\W/,'')}" \
 ++JvmOptions="#{@jruby_opts.join(";")}"
 }
         system "#{prunsrv} #{command}"
