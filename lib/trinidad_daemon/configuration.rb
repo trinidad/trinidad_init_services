@@ -11,36 +11,39 @@ module Trinidad
         @stdout = stdout
       end
 
+      def initialize_paths
+        @trinidad_daemon_path = File.expand_path('../../trinidad_daemon.rb', __FILE__)
+        @jars_path = File.expand_path('../../../trinidad-libs', __FILE__)
+
+        @classpath = ['jruby-jsvc.jar', 'commons-daemon.jar'].map { |jar| File.join(@jars_path, jar) }
+        @classpath << File.join(@jruby_home, 'lib', 'jruby.jar')
+      end
+
+      def collect_windows_opts(options_ask)
+        options_ask << '(separated by `;`)'
+        options_default = ''
+        name_ask = 'Service name? {Alphanumeric and spaces only}'
+        name_default = 'Trinidad'
+        @trinidad_name = ask(name_ask, name_default)
+        options_default
+      end
+
       def configure
         @app_path = ask_path('Application path?')
         @trinidad_options = ["-d #{@app_path}"]
         options_ask = 'Trinidad options?'
         options_default = '-e production'
-        if windows?
-          options_ask << '(separated by `;`)'
-          options_default = ''
-          name_ask = 'Service name? {Alphanumeric and spaces only}'
-          name_default = 'Trinidad'
-          @trinidad_name = ask(name_ask, name_default)
-        end
+
+        options_default = collect_windows_opts(options_ask) if windows?
+
         @trinidad_options << ask(options_ask, options_default)
 
         @jruby_home = ask_path('JRuby home?', default_jruby_home)
         @jruby_opts = ["-Djruby.home=#{@jruby_home}", "-Djruby.lib=#{File.join(@jruby_home, 'lib')}",
           "-Djruby.script=jruby", "-Djruby.daemon.module.name=Trinidad"]
 
-        @trinidad_daemon_path = File.expand_path('../../trinidad_daemon.rb', __FILE__)
-        @jars_path = File.expand_path('../../../trinidad-libs', __FILE__)
-
-        @classpath = ['jruby-jsvc.jar', 'commons-daemon.jar'].map {|jar| File.join(@jars_path, jar)}
-        @classpath << File.join(@jruby_home, 'lib', 'jruby.jar')
-
-        if windows?
-          configure_windows_service
-        else
-          configure_unix_daemon
-        end
-
+        initialize_paths
+        windows? ? configure_windows_service : configure_unix_daemon
         puts 'Done.'
       end
 
