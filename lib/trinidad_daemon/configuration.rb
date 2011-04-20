@@ -34,6 +34,7 @@ module Trinidad
         opts << "-Djruby.lib=#{File.join(@jruby_home, 'lib')}"
         opts << "-Djruby.script=jruby"
         opts << "-Djruby.daemon.module.name=Trinidad"
+        opts << "-Djruby.compat.version=#{@ruby_compat_version}"
         opts
       end
 
@@ -42,12 +43,11 @@ module Trinidad
         @trinidad_options = ["-d #{@app_path}"]
         options_ask = 'Trinidad options?'
         options_default = '-e production'
-
         options_default = collect_windows_opts(options_ask) if windows?
 
         @trinidad_options << ask(options_ask, options_default)
         @jruby_home = ask_path('JRuby home?', default_jruby_home)
-
+        @ruby_compat_version = ask('Ruby 1.8.x or 1.9.x compatibility?', default_ruby_compat_version)
         @jruby_opts = configure_jruby_opts
         initialize_paths
 
@@ -92,12 +92,17 @@ module Trinidad
       end
 
       private
+
       def default_jruby_home
         Java::JavaLang::System.get_property("jruby.home")
       end
 
       def default_java_home
         Java::JavaLang::System.get_property("java.home")
+      end
+
+      def default_ruby_compat_version
+        "RUBY1_8"
       end
 
       def windows?
