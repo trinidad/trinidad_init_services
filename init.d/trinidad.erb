@@ -32,25 +32,25 @@ CLASSPATH=<%= @classpath.join(":") %>
 
 # TODO: Allow configuration or detect from the OS
 JAVA_NATIVE_PROPS="-Djna.boot.library.path=$JRUBY_HOME/lib/native/linux-i386:$JRUBY_HOME/lib/native/linux-amd64 \
--Djffi.boot.library.path=$JRUBY_HOME/lib/native/i386-Linux:$JRUBY_HOME/lib/native/s390x-Linux:$JRUBY_HOME/lib/native/x86_64-Linux"
+  -Djffi.boot.library.path=$JRUBY_HOME/lib/native/i386-Linux:$JRUBY_HOME/lib/native/s390x-Linux:$JRUBY_HOME/lib/native/x86_64-Linux"
 
 JAVA_PROPS="$JAVA_PROPS -Djruby.memory.max=500m \
--Djruby.stack.max=1024k \
-$JAVA_NATIVE_PROPS \
--Djruby.shell=/bin/sh \
-<%= @jruby_opts.join(' ') %>"
+  -Djruby.stack.max=1024k \
+  $JAVA_NATIVE_PROPS \
+  -Djruby.shell=/bin/sh \
+  <%= @jruby_opts.join(' ') %>"
 
 JAVA_OPTS="-Xmx500m -Xss1024k -Xbootclasspath/a:$JRUBY_HOME/lib/jruby.jar"
 
 JSVC_ARGS="-home $JAVA_HOME \
-$JSVC_ARGS_EXTRA \
--wait 20 \
--pidfile $PIDFILE \
--user $USER \
--procname jsvc-$SCRIPT_NAME \
--jvm server
--outfile $LOG_FILE \
--errfile &1"
+  $JSVC_ARGS_EXTRA \
+  -wait 20 \
+  -pidfile $PIDFILE \
+  -user $USER \
+  -procname jsvc-$SCRIPT_NAME \
+  -jvm server
+  -outfile $LOG_FILE \
+  -errfile &1"
 
 #
 # Stop/Start
