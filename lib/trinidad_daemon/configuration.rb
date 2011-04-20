@@ -28,6 +28,15 @@ module Trinidad
         options_default
       end
 
+      def configure_jruby_opts
+        opts = []
+        opts << "-Djruby.home=#{@jruby_home}"
+        opts << "-Djruby.lib=#{File.join(@jruby_home, 'lib')}"
+        opts << "-Djruby.script=jruby"
+        opts << "-Djruby.daemon.module.name=Trinidad"
+        opts
+      end
+
       def configure
         @app_path = ask_path('Application path?')
         @trinidad_options = ["-d #{@app_path}"]
@@ -37,12 +46,11 @@ module Trinidad
         options_default = collect_windows_opts(options_ask) if windows?
 
         @trinidad_options << ask(options_ask, options_default)
-
         @jruby_home = ask_path('JRuby home?', default_jruby_home)
-        @jruby_opts = ["-Djruby.home=#{@jruby_home}", "-Djruby.lib=#{File.join(@jruby_home, 'lib')}",
-          "-Djruby.script=jruby", "-Djruby.daemon.module.name=Trinidad"]
 
+        @jruby_opts = configure_jruby_opts
         initialize_paths
+
         windows? ? configure_windows_service : configure_unix_daemon
         puts 'Done.'
       end
