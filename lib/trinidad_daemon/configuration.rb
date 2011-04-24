@@ -21,11 +21,9 @@ module Trinidad
 
       def collect_windows_opts(options_ask)
         options_ask << '(separated by `;`)'
-        options_default = ''
         name_ask = 'Service name? {Alphanumeric and spaces only}'
         name_default = 'Trinidad'
         @trinidad_name = ask(name_ask, name_default)
-        options_default
       end
 
       def configure_jruby_opts
@@ -43,7 +41,7 @@ module Trinidad
         @trinidad_options = ["-d #{@app_path}"]
         options_ask = 'Trinidad options?'
         options_default = '-e production'
-        options_default = collect_windows_opts(options_ask) if windows?
+        collect_windows_opts(options_ask) if windows?
 
         @trinidad_options << ask(options_ask, options_default)
         @jruby_home = ask_path('JRuby home?', default_jruby_home)
