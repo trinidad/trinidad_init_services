@@ -1,3 +1,7 @@
+== 0.4.2 (2011-05-17)
+
+* fix several minor bugs
+
 == 0.4.1 (2011-01-18)
 
 * Ensure the unix script is executable by default.
