@@ -1,13 +1,12 @@
 Trinidad daemon
 ===============
 
-Trinidad's daemon library based on Apache Commons Daemon and JRuby-jsvc.
-
-It should replace the daemon_extension in a near future due to the problem we
-are finding with the current forking process.
+Trinidad's daemon library based on Apache Commons Daemon and JRuby-jsvc. Works on Unix and Windows systems.
 
 Installation
 ============
+
+$ jruby -S gem install trinidad_daemon
 
 When the gem is installed the user must launch the installation process:
 
