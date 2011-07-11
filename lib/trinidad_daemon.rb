@@ -3,7 +3,7 @@ require 'trinidad'
 
 module Trinidad
   module Daemon
-    VERSION = '0.4.2'
+    VERSION = '0.4.3'
 
     def init
     end
@@ -14,13 +14,13 @@ module Trinidad
 
     def start
       opts = Trinidad::CommandLineParser.parse(ARGV)
+      opts[:trap] = false
       @server = Trinidad::Server.new(opts)
       @server.start
     end
 
     def stop
-      @server.tomcat.stop
-      @server.tomcat.destroy
+      @server.stop
     end
 
     extend self

@@ -13,8 +13,8 @@ Gem::Specification.new do |s|
   ## If your rubyforge_project name is different, then edit it and comment out
   ## the sub! line in the Rakefile
   s.name              = 'trinidad_daemon'
-  s.version           = '0.4.2'
-  s.date              = '2011-05-17'
+  s.version           = '0.4.3'
+  s.date              = '2011-07-11'
   s.rubyforge_project = 'trinidad_daemon'
 
   ## Make sure your summary is short. The description may be as long
@@ -44,7 +44,7 @@ Gem::Specification.new do |s|
 
   ## List your runtime dependencies here. Runtime dependencies are those
   ## that are needed for an end user to actually USE your code.
-  s.add_dependency('trinidad', '>=1.0.5')
+  s.add_dependency('trinidad', '>=1.2.2.pre')
 
   ## Leave this section as-is. It will be automatically generated from the
   ## contents of your Git repository via the gemspec task. DO NOT REMOVE
