@@ -12,15 +12,15 @@ Gem::Specification.new do |s|
   ## Leave these as is they will be modified for you by the rake gemspec task.
   ## If your rubyforge_project name is different, then edit it and comment out
   ## the sub! line in the Rakefile
-  s.name              = 'trinidad_daemon'
+  s.name              = 'trinidad_init_services'
   s.version           = '0.4.3'
-  s.date              = '2011-07-11'
-  s.rubyforge_project = 'trinidad_daemon'
+  s.date              = '2011-07-12'
+  s.rubyforge_project = 'trinidad_init_services'
 
   ## Make sure your summary is short. The description may be as long
   ## as you like.
-  s.summary     = "Trinidad daemon based on Apache Commons Daemon"
-  s.description = "Trinidad daemon based on Apache Commons Daemon and JRuby-jsvc"
+  s.summary     = "Trinidad init service scripts based on Apache Commons Daemon"
+  s.description = "Trinidad init service scripts on Apache Commons Daemon and JRuby-jsvc, compatible with Unix and Windows services"
 
   ## List the primary authors. If there are a bunch of authors, it's probably
   ## better to set the email to an email list or something. If you don't have
@@ -34,7 +34,7 @@ Gem::Specification.new do |s|
   s.require_paths = %w[lib]
 
   ## If your gem includes any executables, list them here.
-  s.executables = ["trinidad_daemon_install"]
+  s.executables = ["trinidad_init_service"]
   s.default_executable = 'trinidad_daemon_install'
 
   ## Specify any RDoc options here. You'll want to add your README and
@@ -55,14 +55,16 @@ Gem::Specification.new do |s|
     LICENSE
     README
     Rakefile
-    bin/trinidad_daemon_install
+    bin/trinidad_init_service
     init.d/trinidad.erb
-    lib/trinidad_daemon.rb
-    lib/trinidad_daemon/configuration.rb
+    lib/trinidad_init_services.rb
+    lib/trinidad_init_services/configuration.rb
     trinidad-libs/commons-daemon.jar
     trinidad-libs/jruby-jsvc.jar
+    trinidad-libs/jsvc_darwin
+    trinidad-libs/jsvc_linux
     trinidad-libs/prunsrv.exe
-    trinidad_daemon.gemspec
+    trinidad_init_services.gemspec
   ]
   # = MANIFEST =
 
@@ -76,7 +78,7 @@ s.post_install_message = <<TEXT
 
 Please now run:
 
-  $ jruby -S trinidad_daemon_install
+  $ jruby -S trinidad_init_service
 
 to complete the installation.
 

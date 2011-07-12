@@ -1,16 +1,16 @@
-Trinidad daemon
+Trinidad init services
 ===============
 
-Trinidad's daemon library based on Apache Commons Daemon and JRuby-jsvc. Works on Unix and Windows systems.
+Trinidad's init services library based on Apache Commons Daemon and JRuby-jsvc. Works on Unix and Windows systems.
 
 Installation
 ============
 
-$ jruby -S gem install trinidad_daemon
+$ jruby -S gem install trinidad_init_services
 
 When the gem is installed the user must launch the installation process:
 
-    $ jruby -S trinidad_daemon_install
+    $ jruby -S trinidad_init_service
 
 This installer guides you through the configuration process and generates a
 init.d script if you are on a unix system or creates the service if you are
@@ -18,22 +18,6 @@ on a windows box.
 
 Unix
 ====
-
-  Dependencies
-  ============
-
-  The Jsvc native binary file is required, but it's already available for all the
-  platforms supported as a bundled package, i.e:
-
-      Debian/Ubuntu:
-          $ sudo apt-get install jsvc
-      Mac OS X:
-          $ brew install jsvc
-
-  Those binaries are also available in the Apache distribution directory, if
-  you install it from this directory you must ensure it's in your path:
-
-  http://www.apache.org/dist/commons/daemon/binaries/
 
   Execution
   =========

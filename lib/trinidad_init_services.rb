@@ -3,7 +3,7 @@ require 'trinidad'
 
 module Trinidad
   module Daemon
-    VERSION = '0.4.3'
+    VERSION = '1.0.0'
 
     def init
     end

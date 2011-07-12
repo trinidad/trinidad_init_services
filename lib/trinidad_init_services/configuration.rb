@@ -1,5 +1,5 @@
 module Trinidad
-  module Daemon
+  module InitServices
     require 'erb'
     require 'java'
     require 'rbconfig'
@@ -12,7 +12,7 @@ module Trinidad
       end
 
       def initialize_paths
-        @trinidad_daemon_path = File.expand_path('../../trinidad_daemon.rb', __FILE__)
+        @trinidad_daemon_path = File.expand_path('../../trinidad_init_services.rb', __FILE__)
         @jars_path = File.expand_path('../../../trinidad-libs', __FILE__)
 
         @classpath = ['jruby-jsvc.jar', 'commons-daemon.jar'].map { |jar| File.join(@jars_path, jar) }
@@ -54,7 +54,7 @@ module Trinidad
       end
 
       def configure_unix_daemon
-        @jsvc = ask_path('Jsvc path?', `which jsvc`.chomp)
+        @jsvc = jsvc_path
         @java_home = ask_path('Java home?', default_java_home)
         @output_path = ask_path('init.d output path?', '/etc/init.d')
         @pid_file = ask_path('pid file?', '/var/run/trinidad/trinidad.pid')
@@ -77,6 +77,7 @@ module Trinidad
 
       def configure_windows_service
         prunsrv = File.join(@jars_path, 'prunsrv.exe')
+
         command = %Q{//IS//Trinidad --DisplayName="#{@trinidad_name}" \
 --Install="#{prunsrv}" --Jvm=auto --StartMode=jvm --StopMode=jvm \
 --StartClass=com.msp.procrun.JRubyService --StartMethod=start \
@@ -104,7 +105,16 @@ module Trinidad
       end
 
       def windows?
-        RbConfig::CONFIG['host_os'] =~ /mswin|mingw/
+        RbConfig::CONFIG['host_os'] =~ /mswin|mingw/i
+      end
+
+      def macosx?
+        RbConfig::CONFIG['host_os'] =~ /darwin/i
+      end
+
+      def jsvc_path
+        jsvc = 'jsvc_' + (macosx? ? 'darwin' : 'linux')
+        File.join(@jars_path, jsvc)
       end
 
       def ask_path(question, default = nil)
