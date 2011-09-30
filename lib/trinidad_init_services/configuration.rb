@@ -76,10 +76,8 @@ module Trinidad
       end
 
       def configure_windows_service
-        prunsrv = File.join(@jars_path, 'prunsrv.exe')
-
         command = %Q{//IS//Trinidad --DisplayName="#{@trinidad_name}" \
---Install="#{prunsrv}" --Jvm=auto --StartMode=jvm --StopMode=jvm \
+--Install="#{prunsrv_path}" --Jvm=auto --StartMode=jvm --StopMode=jvm \
 --StartClass=com.msp.procrun.JRubyService --StartMethod=start \
 --StartParams="#{@trinidad_daemon_path};#{@trinidad_options.join(";")}" \
 --StopClass=com.msp.procrun.JRubyService --StopMethod=stop --Classpath="#{@classpath.join(";")}" \
@@ -112,9 +110,18 @@ module Trinidad
         RbConfig::CONFIG['host_os'] =~ /darwin/i
       end
 
+      def ia64?
+        RbConfig::CONFIG['arch'] =~ /i686|ia64/i
+      end
+
       def jsvc_path
         jsvc = 'jsvc_' + (macosx? ? 'darwin' : 'linux')
         File.join(@jars_path, jsvc)
+      end
+
+      def prunsrv_path
+        prunsrv = 'prunsrv_' + (ia64? 'ia64' : 'amd64') + '.exe'
+        File.join(@jars_path, prunsrv)
       end
 
       def ask_path(question, default = nil)
