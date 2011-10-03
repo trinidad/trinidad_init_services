@@ -120,7 +120,7 @@ module Trinidad
       end
 
       def prunsrv_path
-        prunsrv = 'prunsrv_' + (ia64? 'ia64' : 'amd64') + '.exe'
+        prunsrv = 'prunsrv_' + (ia64? ? 'ia64' : 'amd64') + '.exe'
         File.join(@jars_path, prunsrv)
       end
 
