@@ -1,159 +1,86 @@
 module Trinidad
   module InitServices
-    require 'erb'
-    require 'java'
-    require 'rbconfig'
     require 'fileutils'
+    require 'java'
+    require 'trinidad_init_services/term'
+    require 'trinidad_init_services/rb_config'
 
     class Configuration
+      include Trinidad::InitServices::RbConfig
+
+      def self.init(stdin = STDIN, stdout = STDOUT)
+        strategy = windows? ? WindowsStrategy : UnixStrategy
+        strategy.new(stdin, stdout)
+      end
+
       def initialize(stdin = STDIN, stdout = STDOUT)
-        @stdin = stdin
-        @stdout = stdout
+        @term = Term.new(stdin, stdout)
       end
 
-      def initialize_paths
-        @trinidad_daemon_path = File.expand_path('../../trinidad_init_services.rb', __FILE__)
-        @jars_path = File.expand_path('../../../trinidad-libs', __FILE__)
+      def init_options(jruby_home)
+        opts = {
+          :jruby_home  => jruby_home,
+          :daemon_path => File.expand_path(File.join('..', 'trinidad_init_services.rb'), base_dir),
+          :jars_path   => File.join(base_dir, 'services')
+        }
 
-        @classpath = ['jruby-jsvc.jar', 'commons-daemon.jar'].map { |jar| File.join(@jars_path, jar) }
-        @classpath << File.join(@jruby_home, 'lib', 'jruby.jar')
-      end
-
-      def collect_windows_opts(options_ask)
-        options_ask << '(separated by `;`)'
-        name_ask = 'Service name? {Alphanumeric and spaces only}'
-        name_default = 'Trinidad'
-        @trinidad_name = ask(name_ask, name_default)
-      end
-
-      def configure_jruby_opts
-        opts = []
-        opts << "-Djruby.home=#{@jruby_home}"
-        opts << "-Djruby.lib=#{File.join(@jruby_home, 'lib')}"
-        opts << "-Djruby.script=jruby"
-        opts << "-Djruby.daemon.module.name=Trinidad"
-        opts << "-Djruby.compat.version=#{@ruby_compat_version}"
+        class_path = ['jruby-jsvc.jar', 'commons-daemon.jar'].map { |jar| File.join(opts[:jars_path], jar) }
+        class_path << File.join(jruby_home, 'lib', 'jruby.jar')
+        opts[:class_path] = class_path
         opts
       end
 
+      def configure_jruby_opts(jruby_home, compat_version)
+        opts = [
+          "-Djruby.home=#{jruby_home}",
+          "-Djruby.lib=#{File.join(jruby_home, 'lib')}",
+          "-Djruby.script=jruby",
+          "-Djruby.daemon.module.name=Trinidad",
+          "-Djruby.compat.version=#{compat_version}"
+        ]
+      end
+
       def configure
-        @app_path = ask_path('Application path?')
-        @trinidad_options = ["-d #{@app_path}"]
-        options_ask = 'Trinidad options?'
-        options_default = '-e production'
-        collect_windows_opts(options_ask) if windows?
+        jruby_home = ask_path('JRuby home?', default_jruby_home)
+        compat_version = ask('Ruby 1.8.x or 1.9.x compatibility?', "RUBY1_8")
 
-        @trinidad_options << ask(options_ask, options_default)
-        @jruby_home = ask_path('JRuby home?', default_jruby_home)
-        @ruby_compat_version = ask('Ruby 1.8.x or 1.9.x compatibility?', default_ruby_compat_version)
-        @jruby_opts = configure_jruby_opts
-        initialize_paths
+        global_options = init_options(jruby_home)
+        global_options[:compat_version] = compat_version
+        global_options[:jruby_options]  = configure_jruby_opts(jruby_home, compat_version)
+        global_options[:app_path]       = ask_path('Application path?')
 
-        windows? ? configure_windows_service : configure_unix_daemon
+        trinidad_options = ["-d #{@app_path}"]
+        trinidad_options << ask(@strategy.trinidad_options_question, '-e production')
+        global_options[:trinidad_options]
+
+        configure_strategy(global_options, trinidad_default_options)
         puts 'Done.'
       end
 
-      def configure_unix_daemon
-        @jsvc = jsvc_path
-        @java_home = ask_path('Java home?', default_java_home)
-        @output_path = ask_path('init.d output path?', '/etc/init.d')
-        @pid_file = ask_path('pid file?', '/var/run/trinidad/trinidad.pid')
-        @log_file = ask_path('log file?', '/var/log/trinidad/trinidad.log')
-
-        daemon = ERB.new(
-          File.read(
-            File.expand_path('../../init.d/trinidad.erb', File.dirname(__FILE__))
-          )
-        ).result(binding)
-
-        puts "Moving trinidad to #{@output_path}"
-        tmp_file = "#{@output_path}/trinidad"
-        File.open(tmp_file, 'w') do |file|
-          file.write(daemon)
-        end
-
-        FileUtils.chmod(0744, tmp_file)
-      end
-
-      def configure_windows_service
-        command = %Q{//IS//Trinidad --DisplayName="#{@trinidad_name}" \
---Install="#{prunsrv_path}" --Jvm=auto --StartMode=jvm --StopMode=jvm \
---StartClass=com.msp.procrun.JRubyService --StartMethod=start \
---StartParams="#{@trinidad_daemon_path};#{@trinidad_options.join(";")}" \
---StopClass=com.msp.procrun.JRubyService --StopMethod=stop --Classpath="#{@classpath.join(";")}" \
---StdOutput=auto --StdError=auto \
---LogPrefix="#{@trinidad_name.downcase.gsub(/\W/,'')}" \
-++JvmOptions="#{@jruby_opts.join(";")}"
-}
-        system "#{prunsrv} #{command}"
-      end
-
       private
+
+      def base_dir
+        File.dirname(__FILE__)
+      end
 
       def default_jruby_home
         Java::JavaLang::System.get_property("jruby.home")
       end
 
-      def default_java_home
-        Java::JavaLang::System.get_property("java.home")
-      end
-
-      def default_ruby_compat_version
-        "RUBY1_8"
-      end
-
-      def windows?
-        RbConfig::CONFIG['host_os'] =~ /mswin|mingw/i
-      end
-
-      def macosx?
-        RbConfig::CONFIG['host_os'] =~ /darwin/i
-      end
-
-      def ia64?
-        RbConfig::CONFIG['arch'] =~ /i686|ia64/i
-      end
-
-      def jsvc_path
-        jsvc = 'jsvc_' + (macosx? ? 'darwin' : 'linux')
-        File.join(@jars_path, jsvc)
-      end
-
-      def prunsrv_path
-        prunsrv = 'prunsrv_' + (ia64? ? 'ia64' : 'amd64') + '.exe'
-        File.join(@jars_path, prunsrv)
-      end
-
-      def ask_path(question, default = nil)
-        File.expand_path(ask(question, default))
+      def self.windows?
+        rbconfig['host_os'] =~ /mswin|mingw/i
       end
 
       def ask(question, default = nil)
-        return nil if not @stdin.tty?
+        term.ask(question, default)
+      end
 
-        question << " [#{default}]" if default && !default.empty?
-
-        result = nil
-
-        while result.nil?
-          @stdout.print(question + "  ")
-          @stdout.flush
-
-          result = @stdin.gets
-
-          if result
-            result.chomp!
-
-            result = case result
-            when /^$/
-              default
-            else
-              result
-            end
-          end
-        end
-        return result
+      def ask_path(question, default = nil)
+        term.ask_path(question, default)
       end
     end
+
+    require 'trinidad_init_services/unix_strategy'
+    require 'trinidad_init_services/windows_strategy'
   end
 end

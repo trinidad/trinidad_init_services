@@ -1,0 +1,34 @@
+PATH
+  remote: .
+  specs:
+    trinidad_init_services (1.1.0.pre2)
+      trinidad (>= 1.2.2)
+
+GEM
+  remote: http://rubygems.org/
+  specs:
+    diff-lcs (1.1.3)
+    fakefs (0.3.2)
+    jruby-rack (1.0.9)
+    rake (0.8.7)
+    rspec (2.6.0)
+      rspec-core (~> 2.6.0)
+      rspec-expectations (~> 2.6.0)
+      rspec-mocks (~> 2.6.0)
+    rspec-core (2.6.4)
+    rspec-expectations (2.6.0)
+      diff-lcs (~> 1.1.2)
+    rspec-mocks (2.6.0)
+    trinidad (1.2.3)
+      jruby-rack (>= 1.0.9)
+      trinidad_jars (>= 1.0.1)
+    trinidad_jars (1.0.2)
+
+PLATFORMS
+  java
+
+DEPENDENCIES
+  fakefs
+  rake (= 0.8.7)
+  rspec
+  trinidad_init_services!

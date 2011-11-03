@@ -12,23 +12,23 @@
 # Things you can set:
 # PROG_OPTS - Arguments to send to the program. A few defaults are appended to this.
 
-JSVC=<%= @jsvc %>
-JAVA_HOME=<%= @java_home %>
-JRUBY_HOME=<%= @jruby_home %>
-APP_PATH=<%= @app_path %>
-RUBY_SCRIPT=<%= @trinidad_daemon_path %>
+JSVC=<%= @options[:jsvc] %>
+JAVA_HOME=<%= @options[:java_home] %>
+JRUBY_HOME=<%= @options[:jruby_home] %>
+APP_PATH=<%= @options[:app_path] %>
+RUBY_SCRIPT=<%= @options[:daemon_path] %>
 
 # Add here the options that Trinidad needs to run your application,
 # but DO NOT delete the -d option, i.e -e production
-TRINIDAD_OPTS="<%= @trinidad_options.join(" ") %>"
+TRINIDAD_OPTS="<%= @options[:trinidad_options].join(" ") %>"
 
-PIDFILE=<%= @pid_file %>
-LOG_FILE=<%= @log_file %>
+PIDFILE=<%= @options[:pid_file] %>
+LOG_FILE=<%= @options[:log_file] %>
 
 # Implements the jsvc Daemon interface.
 MAIN_CLASS=com.msp.jsvc.JRubyDaemon
 
-CLASSPATH=<%= @classpath.join(":") %>
+CLASSPATH=<%= @options[:class_path].join(":") %>
 
 if [ -z "$JRUBY_OPTS" ] ; then
   JRUBY_OPTS=""
@@ -42,7 +42,7 @@ JAVA_PROPS="$JAVA_PROPS -Djruby.memory.max=500m \
   -Djruby.stack.max=1024k \
   $JAVA_NATIVE_PROPS \
   -Djruby.shell=/bin/sh \
-  <%= @jruby_opts.join(' ') %> \
+  <%= @options[:jruby_options].join(' ') %> \
   $JRUBY_OPTS"
 
 JAVA_OPTS="-Xmx500m -Xss1024k -Xbootclasspath/a:$JRUBY_HOME/lib/jruby.jar"
