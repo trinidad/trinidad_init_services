@@ -76,8 +76,9 @@ module Trinidad
       end
 
       def configure_windows_service
+        srv_path = prunsrv_path
         command = %Q{//IS//Trinidad --DisplayName="#{@trinidad_name}" \
---Install="#{prunsrv_path}" --Jvm=auto --StartMode=jvm --StopMode=jvm \
+--Install="#{srv_path}" --Jvm=auto --StartMode=jvm --StopMode=jvm \
 --StartClass=com.msp.procrun.JRubyService --StartMethod=start \
 --StartParams="#{@trinidad_daemon_path};#{@trinidad_options.join(";")}" \
 --StopClass=com.msp.procrun.JRubyService --StopMethod=stop --Classpath="#{@classpath.join(";")}" \
@@ -85,7 +86,7 @@ module Trinidad
 --LogPrefix="#{@trinidad_name.downcase.gsub(/\W/,'')}" \
 ++JvmOptions="#{@jruby_opts.join(";")}"
 }
-        system "#{prunsrv} #{command}"
+        system "#{srv_path} #{command}"
       end
 
       private
