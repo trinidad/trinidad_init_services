@@ -13,8 +13,8 @@ Gem::Specification.new do |s|
   ## If your rubyforge_project name is different, then edit it and comment out
   ## the sub! line in the Rakefile
   s.name              = 'trinidad_init_services'
-  s.version           = '1.1.0.pre2'
-  s.date              = '2011-10-03'
+  s.version           = '1.1.0.pre3'
+  s.date              = '2011-11-03'
   s.rubyforge_project = 'trinidad_init_services'
 
   ## Make sure your summary is short. The description may be as long
