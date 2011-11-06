@@ -11,19 +11,24 @@ module Trinidad
         @options[:pid_file] = ask_path('pid file?', '/var/run/trinidad.pid')
         @options[:log_file] = ask_path('log file?', '/var/log/trinidad.log')
 
-        render_template output_path
+        render_template(output_path)
       end
 
       def render_template(output_path)
         daemon = ERB.new(init_template).result(binding)
 
-        puts "Moving trinidad to #{output_path}"
-        tmp_file = "#{output_path}/trinidad"
-        File.open(tmp_file, 'w') do |file|
-          file.write(daemon)
-        end
+        unless @options[:test]
+          puts "Moving trinidad to #{output_path}"
+          tmp_file = "#{output_path}/trinidad"
+          File.open(tmp_file, 'w') do |file|
+            file.write(daemon)
+          end
 
-        FileUtils.chmod(0744, tmp_file)
+          FileUtils.chmod(0744, tmp_file)
+        else
+          puts 'Testing init service:'
+          puts daemon
+        end
       end
 
       def init_template

@@ -1,3 +1,6 @@
 require 'trinidad_init_services/configuration'
 
-Trinidad::InitServices::Configuration.new.configure
+test = ARGV.include?('--test')
+win  = ARGV.include?('--win')
+
+Trinidad::InitServices::Configuration.init(win).configure(test)

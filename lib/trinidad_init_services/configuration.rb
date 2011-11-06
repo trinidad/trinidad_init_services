@@ -8,8 +8,8 @@ module Trinidad
     class Configuration
       include Trinidad::InitServices::RbConfig
 
-      def self.init(stdin = STDIN, stdout = STDOUT)
-        strategy = windows? ? WindowsStrategy : UnixStrategy
+      def self.init(win = nil, stdin = STDIN, stdout = STDOUT)
+        strategy = (win || windows?) ? WindowsStrategy : UnixStrategy
         strategy.new(stdin, stdout)
       end
 
@@ -40,7 +40,7 @@ module Trinidad
         ]
       end
 
-      def configure
+      def configure(test = false)
         jruby_home = ask_path('JRuby home?', default_jruby_home)
         compat_version = ask('Ruby 1.8.x or 1.9.x compatibility?', "RUBY1_8")
 
@@ -49,11 +49,12 @@ module Trinidad
         global_options[:jruby_options]  = configure_jruby_opts(jruby_home, compat_version)
         global_options[:app_path]       = ask_path('Application path?')
 
-        trinidad_options = ["-d #{@app_path}"]
-        trinidad_options << ask(@strategy.trinidad_options_question, '-e production')
-        global_options[:trinidad_options]
+        trinidad_options = ["-d #{global_options[:app_path]}"]
+        trinidad_options << ask(trinidad_options_question, '-e production')
+        global_options[:trinidad_options] = trinidad_options
 
-        configure_strategy(global_options, trinidad_default_options)
+        global_options[:test] = test
+        configure_strategy(global_options)
         puts 'Done.'
       end
 
@@ -72,11 +73,11 @@ module Trinidad
       end
 
       def ask(question, default = nil)
-        term.ask(question, default)
+        @term.ask(question, default)
       end
 
       def ask_path(question, default = nil)
-        term.ask_path(question, default)
+        @term.ask_path(question, default)
       end
     end
 

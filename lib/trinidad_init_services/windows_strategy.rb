@@ -1,12 +1,19 @@
 module Trinidad
   module InitServices
     class WindowsStrategy < Configuration
+      require 'escape'
+
       def configure_strategy(options)
         service_name = ask('Windows service name? {Alphanumeric and spaces only}', 'Trinidad')
         service = prunsrv(options[:jars_path])
 
         command = service_command(service_name, service, options)
-        system "#{service} #{command}"
+        unless options[:test]
+          system Escape.shell_command("#{service} #{command}")
+        else
+          puts 'Testing init service:'
+          puts service, command
+        end
       end
 
       def service_command(service_name, service, options)
