@@ -30,7 +30,11 @@ command.  An example configuration file might look like this:
     pid_file: "/tmp/trinidad.pid"
     log_file: "/tmp/trinidad.log"
 
-If any of these options are not provided, then the installer will prompt you
+You can then run the installer like so:
+
+    $ jruby -S trinidad_init_service trinidad_init_config.yml
+
+If any of the required options are not provided in the configuration file, then the installer will prompt you
 for them.
 
 Unix
