@@ -19,11 +19,11 @@ module Trinidad
         @classpath << File.join(@jruby_home, 'lib', 'jruby.jar')
       end
 
-      def collect_windows_opts(options_ask)
+      def collect_windows_opts(options_ask, defaults)
         options_ask << '(separated by `;`)'
         name_ask = 'Service name? {Alphanumeric and spaces only}'
         name_default = 'Trinidad'
-        @trinidad_name = ask(name_ask, name_default)
+        @trinidad_name = defaults["trinidad_name"] || ask(name_ask, name_default)
       end
 
       def configure_jruby_opts
@@ -36,29 +36,29 @@ module Trinidad
         opts
       end
 
-      def configure
-        @app_path = ask_path('Application path?')
+      def configure(defaults={})
+        @app_path = defaults["app_path"] || ask_path('Application path?')
         @trinidad_options = ["-d #{@app_path}"]
         options_ask = 'Trinidad options?'
         options_default = '-e production'
-        collect_windows_opts(options_ask) if windows?
+        collect_windows_opts(options_ask, defaults) if windows?
 
-        @trinidad_options << ask(options_ask, options_default)
-        @jruby_home = ask_path('JRuby home?', default_jruby_home)
-        @ruby_compat_version = ask('Ruby 1.8.x or 1.9.x compatibility?', default_ruby_compat_version)
+        @trinidad_options << (defaults["trinidad_options"] || ask(options_ask, options_default))
+        @jruby_home = defaults["jruby_home"] || ask_path('JRuby home?', default_jruby_home)
+        @ruby_compat_version = defaults["ruby_compat_version"] || ask('Ruby 1.8.x or 1.9.x compatibility?', default_ruby_compat_version)
         @jruby_opts = configure_jruby_opts
         initialize_paths
 
-        windows? ? configure_windows_service : configure_unix_daemon
+        windows? ? configure_windows_service : configure_unix_daemon(defaults)
         puts 'Done.'
       end
 
-      def configure_unix_daemon
-        @jsvc = jsvc_path
-        @java_home = ask_path('Java home?', default_java_home)
-        @output_path = ask_path('init.d output path?', '/etc/init.d')
-        @pid_file = ask_path('pid file?', '/var/run/trinidad/trinidad.pid')
-        @log_file = ask_path('log file?', '/var/log/trinidad/trinidad.log')
+      def configure_unix_daemon(defaults)
+        @jsvc = defaults["jsvc_path"] || jsvc_path
+        @java_home = defaults["java_home"] || ask_path('Java home?', default_java_home)
+        @output_path = defaults["output_path"] || ask_path('init.d output path?', '/etc/init.d')
+        @pid_file = defaults["pid_file"] || ask_path('pid file?', '/var/run/trinidad/trinidad.pid')
+        @log_file = defaults["log_file"] || ask_path('log file?', '/var/log/trinidad/trinidad.log')
 
         daemon = ERB.new(
           File.read(
