@@ -48,7 +48,7 @@ describe Trinidad::InitServices::WindowsStrategy do
       command = subject.service_command('Trinidad_test', 'prunsrv_i64.exe', command_options)
       command.should =~ /--DisplayName="Trinidad_test"/
       command.should =~ /--Install="prunsrv_i64.exe"/
-      command.should =~ /--StartParams="\\path_to_daemon;-e production"/
+      command.should =~ %r{--StartParams="\\path_to_daemon;-d /tmp/foo;-e production"}
       command.should =~ /--Classpath="\\class_path"/
       command.should =~ /--LogPrefix="trinidad_test"/
       command.should =~ /\+\+JvmOptions="-J-Xmx10Gb"/
