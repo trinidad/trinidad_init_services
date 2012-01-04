@@ -77,19 +77,29 @@ module Trinidad
 
       def configure_windows_service
         srv_path = prunsrv_path
-        command = %Q{//IS//Trinidad --DisplayName="#{@trinidad_name}" \
---Install="#{srv_path}" --Jvm=auto --StartMode=jvm --StopMode=jvm \
+        trinidad_service_id = @trinidad_name.gsub(/\W/, '')
+
+        command = %Q{//IS//#{trinidad_service_id} --DisplayName="#{@trinidad_name}" \
+--Install=#{srv_path} --Jvm=auto --StartMode=jvm --StopMode=jvm \
 --StartClass=com.msp.procrun.JRubyService --StartMethod=start \
---StartParams="#{@trinidad_daemon_path};#{@trinidad_options.join(";")}" \
---StopClass=com.msp.procrun.JRubyService --StopMethod=stop --Classpath="#{@classpath.join(";")}" \
+--StartParams="#{escape(@trinidad_daemon_path)};#{format_path(@trinidad_options)}" \
+--StopClass=com.msp.procrun.JRubyService --StopMethod=stop --Classpath="#{format_path(@classpath)}" \
 --StdOutput=auto --StdError=auto \
---LogPrefix="#{@trinidad_name.downcase.gsub(/\W/,'')}" \
-++JvmOptions="#{@jruby_opts.join(";")}"
+--LogPrefix="#{trinidad_service_id.downcase}" \
+++JvmOptions="#{format_path(@jruby_opts)}"
 }
         system "#{srv_path} #{command}"
       end
 
       private
+
+      def escape(path)
+        path.gsub(%r{/}, '\\')
+      end
+
+      def format_path(option)
+        option.map {|o| escape(o)}.join(';')
+      end
 
       def default_jruby_home
         Java::JavaLang::System.get_property("jruby.home")
