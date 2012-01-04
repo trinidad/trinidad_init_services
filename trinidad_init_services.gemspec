@@ -13,8 +13,8 @@ Gem::Specification.new do |s|
   ## If your rubyforge_project name is different, then edit it and comment out
   ## the sub! line in the Rakefile
   s.name              = 'trinidad_init_services'
-  s.version           = '1.1.0.pre3'
-  s.date              = '2011-11-03'
+  s.version           = '1.1.0'
+  s.date              = '2012-01-04'
   s.rubyforge_project = 'trinidad_init_services'
 
   ## Make sure your summary is short. The description may be as long
@@ -59,6 +59,8 @@ Gem::Specification.new do |s|
     init.d/trinidad.erb
     lib/trinidad_init_services.rb
     lib/trinidad_init_services/configuration.rb
+    spec/spec_helper.rb
+    spec/trinidad_init_services/configuration_spec.rb
     trinidad-libs/commons-daemon.jar
     trinidad-libs/jruby-jsvc.jar
     trinidad-libs/jsvc_darwin

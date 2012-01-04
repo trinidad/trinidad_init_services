@@ -1,3 +1,8 @@
+== 1.1.0 (2012-01-04)
+
+* Fix bug that didn't allow to create several services with different ids.
+* Allow to provide a configuration file to load the options from.
+
 == 1.1.0.pre (2011-09-30)
 
 * Load prunsrv on Windows according with the architecture
