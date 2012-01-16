@@ -1,3 +1,7 @@
+== 1.1.1 (2012-01-16)
+
+* Fix #8: issue on with -errfile &1 being misinterpreted.
+
 == 1.1.0 (2012-01-04)
 
 * Fix bug that didn't allow to create several services with different ids.
