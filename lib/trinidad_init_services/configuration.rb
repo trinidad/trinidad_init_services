@@ -59,7 +59,13 @@ module Trinidad
         @output_path = defaults["output_path"] || ask_path('init.d output path?', '/etc/init.d')
         @pid_file = defaults["pid_file"] || ask_path('pid file?', '/var/run/trinidad/trinidad.pid')
         @log_file = defaults["log_file"] || ask_path('log file?', '/var/log/trinidad/trinidad.log')
-
+        @run_user = defaults["run_user"] || ask_path('run daemon as user?', '')
+        
+        @run_user.strip!
+        if @run_user != '' && `id -u #{@run_user}` == ''
+          raise ArgumentError, "'#{@run_user}' does not exist"
+        end
+        
         daemon = ERB.new(
           File.read(
             File.expand_path('../../init.d/trinidad.erb', File.dirname(__FILE__))
