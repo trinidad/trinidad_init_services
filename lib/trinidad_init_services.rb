@@ -11,11 +11,11 @@ module Trinidad
     def setup?
       true
     end
-
-    def start
-      opts = Trinidad::CommandLineParser.parse(ARGV)
-      opts[:trap] = false
-      @server = Trinidad::Server.new(opts)
+    
+    def start(args = ARGV)
+      Trinidad::CommandLineParser.parse(args)
+      Trinidad.configuration.trap = false
+      @server = Trinidad::Server.new
       @server.start
     end
 
