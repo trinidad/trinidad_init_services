@@ -46,6 +46,9 @@ Gem::Specification.new do |s|
   ## that are needed for an end user to actually USE your code.
   s.add_dependency('trinidad', '>=1.2.2')
 
+  s.add_development_dependency('rspec', '>= 2.7.1')
+  s.add_development_dependency('mocha', '>= 0.10')
+  
   ## Leave this section as-is. It will be automatically generated from the
   ## contents of your Git repository via the gemspec task. DO NOT REMOVE
   ## THE MANIFEST COMMENTS, they are used as delimiters by the task.
