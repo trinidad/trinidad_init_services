@@ -59,7 +59,15 @@ module Trinidad
         @output_path = defaults["output_path"] || ask_path('init.d output path?', '/etc/init.d')
         @pid_file = defaults["pid_file"] || ask_path('pid file?', '/var/run/trinidad/trinidad.pid')
         @log_file = defaults["log_file"] || ask_path('log file?', '/var/log/trinidad/trinidad.log')
-
+        @run_user = defaults["run_user"] || ask('run daemon as user (enter a non-root username or leave blank)?', '')
+        
+        if @run_user != '' && `id -u #{@run_user}` == ''
+          raise ArgumentError, "user '#{@run_user}' does not exist (leave blank if you're planning to `useradd' later)"
+        end
+        
+        make_path_dir(@pid_file, "could not create dir for '#{@pid_file}', make sure dir exists before running daemon")
+        make_path_dir(@log_file, "could not create dir for '#{@log_file}', make sure dir exists before running daemon")
+        
         daemon = ERB.new(
           File.read(
             File.expand_path('../../init.d/trinidad.erb', File.dirname(__FILE__))
@@ -67,12 +75,9 @@ module Trinidad
         ).result(binding)
 
         puts "Moving trinidad to #{@output_path}"
-        tmp_file = "#{@output_path}/trinidad"
-        File.open(tmp_file, 'w') do |file|
-          file.write(daemon)
-        end
-
-        FileUtils.chmod(0744, tmp_file)
+        trinidad_file = File.join(@output_path, "trinidad")
+        File.open(trinidad_file, 'w') { |file| file.write(daemon) }
+        FileUtils.chmod(@run_user == '' ? 0744 : 0755, trinidad_file)
       end
 
       def configure_windows_service
@@ -135,6 +140,17 @@ module Trinidad
         File.join(@jars_path, prunsrv)
       end
 
+      def make_path_dir(path, error = nil)
+        dir = File.dirname(path)
+        return if File.exist?(dir)
+        begin
+          FileUtils.mkdir_p dir, :mode => 0775
+        rescue Errno::EACCES => e
+          raise unless error
+          puts "#{error} (#{e})"
+        end
+      end
+      
       def ask_path(question, default = nil)
         File.expand_path(ask(question, default))
       end

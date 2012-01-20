@@ -15,6 +15,7 @@ JAVA_HOME=<%= @java_home %>
 JRUBY_HOME=<%= @jruby_home %>
 APP_PATH=<%= @app_path %>
 RUBY_SCRIPT=<%= @trinidad_daemon_path %>
+RUN_USER="<%= @run_user %>"
 
 # Add here the options that Trinidad needs to run your application,
 # but DO NOT delete the -d option, i.e -e production
@@ -50,15 +51,18 @@ JSVC_ARGS="-home $JAVA_HOME \
   $JSVC_ARGS_EXTRA \
   -wait 20 \
   -pidfile $PIDFILE \
-  -user $USER \
   -procname jsvc-$PROC_NAME \
   -jvm server
   -outfile $LOG_FILE \
   -errfile &1"
-
+  
 #
 # Stop/Start
 #
+
+if [[ -n $RUN_USER && $EUID -eq 0 ]]; then
+  JSVC="sudo -u $RUN_USER $JSVC"
+fi
 
 STOP_COMMAND="$JSVC $JSVC_ARGS -stop $MAIN_CLASS"
 START_COMMAND="$JSVC $JSVC_ARGS -cp $CLASSPATH $JAVA_PROPS $JAVA_OPTS $MAIN_CLASS $RUBY_SCRIPT $TRINIDAD_OPTS"
