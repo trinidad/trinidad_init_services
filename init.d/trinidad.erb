@@ -10,12 +10,22 @@
 # Things you can set:
 # PROG_OPTS - Arguments to send to the program. A few defaults are appended to this.
 
+# Path to the jsvc binary, if you're having issues with the pre-compiled binary
+# try installing it (e.g. apt-get install jsvc) or compiling it yourself :
+# https://github.com/trinidad/trinidad_init_services/wiki/Installing-JSVC
 JSVC=<%= @jsvc %>
 JAVA_HOME=<%= @java_home %>
 JRUBY_HOME=<%= @jruby_home %>
 APP_PATH=<%= @app_path %>
 RUBY_SCRIPT=<%= @trinidad_daemon_path %>
+# The user rights for the running daemon, if you don't bind directly to 80 than
+# it's always a good idea to run trinidad with non-root user rights.
+# Make sure this user has rights on PIDFILE and LOG_FILE paths.
+# Leaving this empty will cause the daemon to always run as whichever user calls
+# the script (which during init is equivalent to running it as root).
 RUN_USER="<%= @run_user %>"
+# Set this to "1" to echo commands before running them (for troubleshooting) :
+ECHO_COMMAND=""
 
 # Add here the options that Trinidad needs to run your application,
 # but DO NOT delete the -d option, i.e -e production
@@ -60,7 +70,7 @@ JSVC_ARGS="-home $JAVA_HOME \
 # Stop/Start
 #
 
-if [[ -n $RUN_USER && $EUID -eq 0 ]]; then
+if [[ -n "$RUN_USER" && $EUID -eq 0 ]]; then
   JSVC="sudo -u $RUN_USER $JSVC"
 fi
 
@@ -76,6 +86,7 @@ case "$1" in
           exit 1
       else
           echo "Starting $PROC_NAME daemon..."
+          if [ -n "$ECHO_COMMAND" ]; then echo $START_COMMAND; fi
           $START_COMMAND
           EXIT_CODE=$?
           if [ "$EXIT_CODE" != 0 ]; then
@@ -86,6 +97,7 @@ case "$1" in
     stop)
       if [ -e "$PIDFILE" ]; then
           echo "Stopping $PROC_NAME daemon..."
+          if [ -n "$ECHO_COMMAND" ]; then echo $STOP_COMMAND; fi
           $STOP_COMMAND
       else
           echo "No pid file, not stopping."
@@ -95,12 +107,14 @@ case "$1" in
     restart)
       if [ -e "$PIDFILE" ]; then
           echo "Stopping $PROC_NAME daemon..."
+          if [ -n "$ECHO_COMMAND" ]; then echo $STOP_COMMAND; fi
           $STOP_COMMAND
       fi
       if [ -e "$PIDFILE" ]; then
           echo "Pidfile still present, $PROC_NAME hasn't stopped"
           exit 1
       else
+          if [ -n "$ECHO_COMMAND" ]; then echo $START_COMMAND; fi
           $START_COMMAND
           EXIT_CODE=$?
           if [ "$EXIT_CODE" != 0 ]; then
