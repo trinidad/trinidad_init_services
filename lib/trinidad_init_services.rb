@@ -3,7 +3,7 @@ require 'trinidad'
 
 module Trinidad
   module Daemon
-    VERSION = '1.1.2'
+    VERSION = '1.1.3'
 
     def init
     end
@@ -11,7 +11,7 @@ module Trinidad
     def setup?
       true
     end
-    
+
     def start(args = ARGV)
       Trinidad::CommandLineParser.parse(args)
       Trinidad.configuration.trap = false
