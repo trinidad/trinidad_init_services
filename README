@@ -58,6 +58,30 @@ Windows
   Open the `Services` panel under `Administrative Tools` and look for a
   service called `Trinidad`.
 
+Running as a Non-Root User
+============================
+
+By default, the Trinidad server process will run as the same user that ran the `/etc/init.d/trinidad start` command.  But the service can be configured to run Trinidad as a different user. The prefered method for doing this is the `run_user:` attribute in the configuration YAML (or it's corresponding value at the prompt).  For example:
+
+    app_path: "/home/myuser/app"
+    trinidad_options: "-e production"
+    jruby_home: "/opt/jruby"
+    run_user: myuser
+    ...
+
+This can be used to run the server as a non-root user (it essentailly invokes the JSVC command with `sudo -u run_user ...`).
+
+On some platforms, however, it may be required that you use the JSVC `-user` argument.  This can be configured with the
+`JSVC_ARGS_EXTRA` environment variable, like this:
+
+    app_path: "/home/myuser/app"
+    trinidad_options: "-e production"
+    jruby_home: "/opt/jruby"
+    jsvc_user: true
+    ...
+
+It not recommended that you mix the `-user` option with the `run_user` option.
+
 == Copyright
 
 Copyright (c) 2011 David Calavera<calavera@apache.org>. See LICENSE for details.
