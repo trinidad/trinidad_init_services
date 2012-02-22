@@ -72,11 +72,8 @@ JSVC_ARGS="-home $JAVA_HOME \
 
 if [[ -n "$RUN_USER" && $EUID -eq 0 ]]; then
   JSVC="sudo -u $RUN_USER $JSVC"
-fi
-
-JSVC_USER="<%= @jsvc_user %>"
-if [ -n "$JSVC_USER" ]; then
-  JSVC_ARGS="$JSVC_ARGS -user $JSVC_USER";
+elif [ "<%= @jsvc_user %>"=="true" ]; then
+  JSVC_ARGS="$JSVC_ARGS -user $USER";
 fi
 
 STOP_COMMAND="$JSVC $JSVC_ARGS -stop $MAIN_CLASS"
