@@ -74,11 +74,7 @@ This can be used to run the server as a non-root user (it essentailly invokes th
 On some platforms, however, it may be required that you use the JSVC `-user` argument.  This can be configured with the
 `JSVC_ARGS_EXTRA` environment variable, like this:
 
-    app_path: "/home/myuser/app"
-    trinidad_options: "-e production"
-    jruby_home: "/opt/jruby"
-    jsvc_user: true
-    ...
+    JSVC_ARGS_EXTRA="-user myuser" /etc/init.d/trinidad start
 
 It not recommended that you mix the `-user` option with the `run_user` option.
 
