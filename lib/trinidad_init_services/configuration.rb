@@ -60,6 +60,7 @@ module Trinidad
         @pid_file = defaults["pid_file"] || ask_path('pid file?', '/var/run/trinidad/trinidad.pid')
         @log_file = defaults["log_file"] || ask_path('log file?', '/var/log/trinidad/trinidad.log')
         @run_user = defaults["run_user"] || ask('run daemon as user (enter a non-root username or leave blank)?', '')
+        @jsvc_user = defaults["jsvc_user"] || ""
         
         if @run_user != '' && `id -u #{@run_user}` == ''
           raise ArgumentError, "user '#{@run_user}' does not exist (leave blank if you're planning to `useradd' later)"
