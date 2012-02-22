@@ -62,7 +62,7 @@ JSVC_ARGS="-home $JAVA_HOME \
   -wait 20 \
   -pidfile $PIDFILE \
   -procname jsvc-$PROC_NAME \
-  -jvm server
+  -jvm server \
   -outfile $LOG_FILE \
   -errfile &1"
   
@@ -72,6 +72,8 @@ JSVC_ARGS="-home $JAVA_HOME \
 
 if [[ -n "$RUN_USER" && $EUID -eq 0 ]]; then
   JSVC="sudo -u $RUN_USER $JSVC"
+elif [ "<%= @jsvc_user %>"=="true" ]; then
+  JSVC_ARGS="$JSVC_ARGS -user $USER";
 fi
 
 STOP_COMMAND="$JSVC $JSVC_ARGS -stop $MAIN_CLASS"
