@@ -1,9 +1,10 @@
+require 'erb'
+require 'java'
+require 'rbconfig'
+require 'fileutils'
+
 module Trinidad
   module InitServices
-    require 'erb'
-    require 'java'
-    require 'rbconfig'
-    require 'fileutils'
 
     class Configuration
       def initialize(stdin = STDIN, stdout = STDOUT)
@@ -134,7 +135,7 @@ module Trinidad
         jsvc = 'jsvc_' + (macosx? ? 'darwin' : 'linux')
         File.join(@jars_path, jsvc)
       end
-
+      
       def prunsrv_path
         prunsrv = 'prunsrv_' + (ia64? ? 'ia64' : 'amd64') + '.exe'
         File.join(@jars_path, prunsrv)

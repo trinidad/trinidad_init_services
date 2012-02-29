@@ -1,11 +1,10 @@
 #!/usr/bin/env jruby
 
 require 'trinidad_init_services/configuration'
-require 'yaml'
 
 if ARGV.size > 0
-  config_file = File.read(ARGV[0])
-  config = YAML.load(config_file)
+  require 'yaml'
+  config = YAML.load File.read(ARGV[0])
   Trinidad::InitServices::Configuration.new.configure(config)
 else
   Trinidad::InitServices::Configuration.new.configure

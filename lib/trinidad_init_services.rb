@@ -1,9 +1,10 @@
 require 'rubygems'
 require 'trinidad'
+require 'trinidad_init_services/version'
 
 module Trinidad
   module Daemon
-    VERSION = '1.1.3'
+    VERSION = Trinidad::InitServices::VERSION
 
     def init
     end
