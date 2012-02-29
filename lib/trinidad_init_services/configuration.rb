@@ -1,5 +1,6 @@
 require 'erb'
 require 'java'
+require 'jruby'
 require 'rbconfig'
 require 'fileutils'
 
@@ -125,7 +126,7 @@ module Trinidad
       end
 
       def default_ruby_compat_version
-        "RUBY1_8"
+        JRuby.runtime.is1_9 ? "RUBY1_9" : "RUBY1_8"
       end
 
       def windows?
@@ -169,6 +170,7 @@ module Trinidad
         FileUtils.cp_r(jsvc_unix_src, jsvc_unpack_dir)
         
         jsvc_dir = File.expand_path('jsvc-unix-src', jsvc_unpack_dir)
+        File.chmod(0755, File.join(jsvc_dir, "configure"))
         # ./configure
         command = "cd #{jsvc_dir} && ./configure --with-java=#{java_home}"
         puts "configuring jsvc ..."
