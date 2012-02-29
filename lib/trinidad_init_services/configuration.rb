@@ -13,7 +13,7 @@ module Trinidad
       end
 
       def initialize_paths
-        @trinidad_daemon_path = File.expand_path('../../trinidad_init_services.rb', __FILE__)
+        @trinidad_daemon_path = File.expand_path('../../trinidad/daemon.rb', __FILE__)
         @jars_path = File.expand_path('../../../trinidad-libs', __FILE__)
 
         @classpath = ['jruby-jsvc.jar', 'commons-daemon.jar'].map { |jar| File.join(@jars_path, jar) }

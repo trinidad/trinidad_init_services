@@ -1,6 +1,6 @@
 #!/usr/bin/env jruby
 
-require 'trinidad_init_services/configuration'
+require 'trinidad_init_services'
 
 if ARGV.size > 0
   require 'yaml'
