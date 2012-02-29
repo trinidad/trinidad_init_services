@@ -59,7 +59,6 @@ module Trinidad
         @java_home = defaults["java_home"] || ask_path('Java home?', default_java_home)
         unless @jsvc = defaults["jsvc_path"] || detect_jsvc_path
           @jsvc = ask_path("path to jsvc binary (leave blank and we're try to compile)?", '')
-          @jsvc.strip!
           if @jsvc.empty? # unpack and compile :
             jsvc_unpack_dir = defaults["jsvc_unpack_dir"] || ask_path("dir where jsvc dist should be unpacked?", '/usr/local/src')
             @jsvc = compile_jsvc(jsvc_unpack_dir, @java_home)
@@ -76,7 +75,9 @@ module Trinidad
           raise ArgumentError, "user '#{@run_user}' does not exist (leave blank if you're planning to `useradd' later)"
         end
         
+        @pid_file = File.join(@pid_file, 'trinidad.pid') if File.exist?(@pid_file) && File.directory?(@pid_file)
         make_path_dir(@pid_file, "could not create dir for '#{@pid_file}', make sure dir exists before running daemon")
+        @log_file = File.join(@log_file, 'trinidad.log') if File.exist?(@log_file) && File.directory?(@log_file)
         make_path_dir(@log_file, "could not create dir for '#{@log_file}', make sure dir exists before running daemon")
         
         daemon = ERB.new(
@@ -209,7 +210,8 @@ module Trinidad
       end
       
       def ask_path(question, default = nil)
-        File.expand_path(ask(question, default))
+        path = ask(question, default)
+        path.empty? ? path : File.expand_path(path)
       end
 
       def ask(question, default = nil)
