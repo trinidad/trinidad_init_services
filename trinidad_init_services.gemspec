@@ -54,6 +54,8 @@ Please now run:
 
 to complete the installation.
 
+NOTE: on linux/solaris gcc needs to be installed as jsvc will be compiled, you might
+      install jsvc using your package manager as well `sudo apt-get install jsvc`
 ------------------------------------------------------------------------------------
 
 TEXT

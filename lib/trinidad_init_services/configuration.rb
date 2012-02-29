@@ -55,8 +55,17 @@ module Trinidad
       end
 
       def configure_unix_daemon(defaults)
-        @jsvc = defaults["jsvc_path"] || jsvc_path
         @java_home = defaults["java_home"] || ask_path('Java home?', default_java_home)
+        unless @jsvc = defaults["jsvc_path"] || detect_jsvc_path
+          @jsvc = ask_path("path to jsvc binary (leave blank and we're try to compile)?", '')
+          @jsvc.strip!
+          if @jsvc.empty? # unpack and compile :
+            jsvc_unpack_dir = defaults["jsvc_unpack_dir"] || ask_path("dir where jsvc dist should be unpacked?", '/usr/local/src')
+            @jsvc = compile_jsvc(jsvc_unpack_dir, @java_home)
+            puts "jsvc binary available at: #{@jsvc} " + 
+                 "(consider adding it to $PATH if you plan to re-run trinidad_init_service)"
+          end
+        end
         @output_path = defaults["output_path"] || ask_path('init.d output path?', '/etc/init.d')
         @pid_file = defaults["pid_file"] || ask_path('pid file?', '/var/run/trinidad/trinidad.pid')
         @log_file = defaults["log_file"] || ask_path('log file?', '/var/log/trinidad/trinidad.log')
@@ -82,7 +91,7 @@ module Trinidad
       end
 
       def configure_windows_service
-        srv_path = prunsrv_path
+        srv_path = bundled_prunsrv_path
         trinidad_service_id = @trinidad_name.gsub(/\W/, '')
 
         command = %Q{//IS//#{trinidad_service_id} --DisplayName="#{@trinidad_name}" \
@@ -112,7 +121,7 @@ module Trinidad
       end
 
       def default_java_home
-        Java::JavaLang::System.get_property("java.home")
+        ENV['JAVA_HOME'] || Java::JavaLang::System.get_property("java.home")
       end
 
       def default_ruby_compat_version
@@ -131,12 +140,57 @@ module Trinidad
         RbConfig::CONFIG['arch'] =~ /i686|ia64/i
       end
 
-      def jsvc_path
+      def bundled_jsvc_path
         jsvc = 'jsvc_' + (macosx? ? 'darwin' : 'linux')
-        File.join(@jars_path, jsvc)
+        jsvc_path = File.join(@jars_path, jsvc)
+        # linux version is no longer bundled - as long as it is not present jsvc 
+        # will be compiled from src (if not installed already #detect_jsvc_path)
+        File.exist?(jsvc_path) ? jsvc_path : nil
+      end
+
+      def detect_jsvc_path
+        jsvc_path = `which jsvc` # "/usr/bin/jsvc\n"
+        jsvc_path.chomp!
+        jsvc_path.empty? ? bundled_jsvc_path : jsvc_path
       end
       
-      def prunsrv_path
+      def compile_jsvc(jsvc_unpack_dir, java_home = default_java_home)
+        unless File.exist?(jsvc_unpack_dir)
+          raise "specified path does not exist: #{jsvc_unpack_dir.inspect}"
+        end
+        unless File.directory?(jsvc_unpack_dir)
+          raise "specified path: #{jsvc_unpack_dir.inspect} is not a directory"
+        end
+        unless File.writable?(jsvc_unpack_dir)
+          raise "specified path: #{jsvc_unpack_dir.inspect} is not writable"
+        end
+        
+        jsvc_unix_src = File.expand_path('../../jsvc-unix-src', File.dirname(__FILE__))
+        FileUtils.cp_r(jsvc_unix_src, jsvc_unpack_dir)
+        
+        jsvc_dir = File.expand_path('jsvc-unix-src', jsvc_unpack_dir)
+        # ./configure
+        command = "cd #{jsvc_dir} && ./configure --with-java=#{java_home}"
+        puts "configuring jsvc ..."
+        command_output = `#{command}`
+        if $?.exitstatus != 0
+          puts command_output
+          raise "`#{command}` failed with status: #{$?.exitstatus}"
+        end
+        
+        # make
+        command = "cd #{jsvc_dir} && make"
+        puts "compiling jsvc ..."
+        command_output = `#{command}`
+        if $?.exitstatus != 0
+          puts command_output
+          raise "`#{command}` failed with status: #{$?.exitstatus}"
+        end
+        
+        File.expand_path('jsvc', jsvc_dir) # return path to compiled jsvc binary
+      end
+      
+      def bundled_prunsrv_path
         prunsrv = 'prunsrv_' + (ia64? ? 'ia64' : 'amd64') + '.exe'
         File.join(@jars_path, prunsrv)
       end
@@ -182,6 +236,7 @@ module Trinidad
         end
         return result
       end
+      
     end
   end
 end
