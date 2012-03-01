@@ -1,9 +1,11 @@
+require 'erb'
+require 'java'
+require 'jruby'
+require 'rbconfig'
+require 'fileutils'
+
 module Trinidad
   module InitServices
-    require 'erb'
-    require 'java'
-    require 'rbconfig'
-    require 'fileutils'
 
     class Configuration
       def initialize(stdin = STDIN, stdout = STDOUT)
@@ -12,7 +14,7 @@ module Trinidad
       end
 
       def initialize_paths
-        @trinidad_daemon_path = File.expand_path('../../trinidad_init_services.rb', __FILE__)
+        @trinidad_daemon_path = File.expand_path('../../trinidad/daemon.rb', __FILE__)
         @jars_path = File.expand_path('../../../trinidad-libs', __FILE__)
 
         @classpath = ['jruby-jsvc.jar', 'commons-daemon.jar'].map { |jar| File.join(@jars_path, jar) }
@@ -54,8 +56,16 @@ module Trinidad
       end
 
       def configure_unix_daemon(defaults)
-        @jsvc = defaults["jsvc_path"] || jsvc_path
         @java_home = defaults["java_home"] || ask_path('Java home?', default_java_home)
+        unless @jsvc = defaults["jsvc_path"] || detect_jsvc_path
+          @jsvc = ask_path("path to jsvc binary (leave blank and we'll try to compile)?", '')
+          if @jsvc.empty? # unpack and compile :
+            jsvc_unpack_dir = defaults["jsvc_unpack_dir"] || ask_path("dir where jsvc dist should be unpacked?", '/usr/local/src')
+            @jsvc = compile_jsvc(jsvc_unpack_dir, @java_home)
+            puts "jsvc binary available at: #{@jsvc} " + 
+                 "(consider adding it to $PATH if you plan to re-run trinidad_init_service)"
+          end
+        end
         @output_path = defaults["output_path"] || ask_path('init.d output path?', '/etc/init.d')
         @pid_file = defaults["pid_file"] || ask_path('pid file?', '/var/run/trinidad/trinidad.pid')
         @log_file = defaults["log_file"] || ask_path('log file?', '/var/log/trinidad/trinidad.log')
@@ -65,7 +75,9 @@ module Trinidad
           raise ArgumentError, "user '#{@run_user}' does not exist (leave blank if you're planning to `useradd' later)"
         end
         
+        @pid_file = File.join(@pid_file, 'trinidad.pid') if File.exist?(@pid_file) && File.directory?(@pid_file)
         make_path_dir(@pid_file, "could not create dir for '#{@pid_file}', make sure dir exists before running daemon")
+        @log_file = File.join(@log_file, 'trinidad.log') if File.exist?(@log_file) && File.directory?(@log_file)
         make_path_dir(@log_file, "could not create dir for '#{@log_file}', make sure dir exists before running daemon")
         
         daemon = ERB.new(
@@ -81,7 +93,7 @@ module Trinidad
       end
 
       def configure_windows_service
-        srv_path = prunsrv_path
+        srv_path = bundled_prunsrv_path
         trinidad_service_id = @trinidad_name.gsub(/\W/, '')
 
         command = %Q{//IS//#{trinidad_service_id} --DisplayName="#{@trinidad_name}" \
@@ -111,11 +123,11 @@ module Trinidad
       end
 
       def default_java_home
-        Java::JavaLang::System.get_property("java.home")
+        ENV['JAVA_HOME'] || Java::JavaLang::System.get_property("java.home")
       end
-
+      
       def default_ruby_compat_version
-        "RUBY1_8"
+        JRuby.runtime.is1_9 ? "RUBY1_9" : "RUBY1_8"
       end
 
       def windows?
@@ -130,12 +142,75 @@ module Trinidad
         RbConfig::CONFIG['arch'] =~ /i686|ia64/i
       end
 
-      def jsvc_path
+      def bundled_jsvc_path
         jsvc = 'jsvc_' + (macosx? ? 'darwin' : 'linux')
-        File.join(@jars_path, jsvc)
+        jsvc_path = File.join(@jars_path, jsvc)
+        # linux version is no longer bundled - as long as it is not present jsvc 
+        # will be compiled from src (if not installed already #detect_jsvc_path)
+        File.exist?(jsvc_path) ? jsvc_path : nil
       end
 
-      def prunsrv_path
+      def detect_jsvc_path
+        jsvc_path = `which jsvc` # "/usr/bin/jsvc\n"
+        jsvc_path.chomp!
+        jsvc_path.empty? ? bundled_jsvc_path : jsvc_path
+      end
+      
+      def compile_jsvc(jsvc_unpack_dir, java_home = default_java_home)
+        unless File.exist?(jsvc_unpack_dir)
+          raise "specified path does not exist: #{jsvc_unpack_dir.inspect}"
+        end
+        unless File.directory?(jsvc_unpack_dir)
+          raise "specified path: #{jsvc_unpack_dir.inspect} is not a directory"
+        end
+        unless File.writable?(jsvc_unpack_dir)
+          raise "specified path: #{jsvc_unpack_dir.inspect} is not writable"
+        end
+        
+        jsvc_unix_src = File.expand_path('../../jsvc-unix-src', File.dirname(__FILE__))
+        FileUtils.cp_r(jsvc_unix_src, jsvc_unpack_dir)
+        
+        jsvc_dir = File.expand_path('jsvc-unix-src', jsvc_unpack_dir)
+        File.chmod(0755, File.join(jsvc_dir, "configure"))
+        # ./configure
+        unless jdk_home = detect_jdk_home(java_home)
+          warn "seems you only have a JRE installed, a JDK is needed to compile jsvc"
+          jdk_home = java_home # it's still worth trying
+        end
+        command = "cd #{jsvc_dir} && ./configure --with-java=#{jdk_home}"
+        puts "configuring jsvc ..."
+        command_output = `#{command}`
+        if $?.exitstatus != 0
+          puts command_output
+          raise "`#{command}` failed with status: #{$?.exitstatus}"
+        end
+        
+        # make
+        command = "cd #{jsvc_dir} && make"
+        puts "compiling jsvc ..."
+        command_output = `#{command}`
+        if $?.exitstatus != 0
+          puts command_output
+          raise "`#{command}` failed with status: #{$?.exitstatus}"
+        end
+        
+        File.expand_path('jsvc', jsvc_dir) # return path to compiled jsvc binary
+      end
+      
+      def detect_jdk_home(java_home = default_java_home)
+        # JDK has an include directory with headers :
+        if File.directory?(File.join(java_home, 'include'))
+          return java_home
+        end
+        # java_home might be a nested JDK path e.g. /opt/java/jdk/jre
+        jdk_home = File.dirname(java_home) # /opt/jdk/jre -> /opt/jdk
+        if File.exist?(File.join(jdk_home, 'bin/java'))
+          return jdk_home
+        end
+        nil
+      end
+      
+      def bundled_prunsrv_path
         prunsrv = 'prunsrv_' + (ia64? ? 'ia64' : 'amd64') + '.exe'
         File.join(@jars_path, prunsrv)
       end
@@ -152,7 +227,8 @@ module Trinidad
       end
       
       def ask_path(question, default = nil)
-        File.expand_path(ask(question, default))
+        path = ask(question, default)
+        path.empty? ? path : File.expand_path(path)
       end
 
       def ask(question, default = nil)
@@ -181,6 +257,7 @@ module Trinidad
         end
         return result
       end
+      
     end
   end
 end
