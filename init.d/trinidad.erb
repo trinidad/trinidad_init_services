@@ -41,18 +41,42 @@ if [ -z "$JRUBY_OPTS" ] ; then
   JRUBY_OPTS=""
 fi
 
-# TODO: Allow configuration or detect from the OS
-JAVA_NATIVE_PROPS="-Djna.boot.library.path=$JRUBY_HOME/lib/native/linux-i386:$JRUBY_HOME/lib/native/linux-amd64 \
-  -Djffi.boot.library.path=$JRUBY_HOME/lib/native/i386-Linux:$JRUBY_HOME/lib/native/s390x-Linux:$JRUBY_HOME/lib/native/x86_64-Linux"
+JRUBY_SHELL=/bin/sh
 
-JAVA_PROPS="$JAVA_PROPS -Djruby.memory.max=500m \
-  -Djruby.stack.max=1024k \
-  $JAVA_NATIVE_PROPS \
-  -Djruby.shell=/bin/sh \
+JRUBY_NATIVE_PATH=""
+if [ -d "$JRUBY_HOME/lib/native/" ]; then
+  for d in $JRUBY_HOME/lib/native/*`uname -s`; do
+    if [ -z "$JRUBY_NATIVE_PATH" ]; then
+      JRUBY_NATIVE_PATH="$d"
+    else
+      JRUBY_NATIVE_PATH="$JRUBY_NATIVE_PATH:$d"
+    fi
+  done
+fi
+
+if [ -z "$JAVA_MEM" ] ; then
+  JAVA_MEM=500m
+fi
+
+if [ -z "$JAVA_STACK" ] ; then
+  JAVA_STACK=2048k
+fi
+
+JAVA_OPTS="-Xmx${JAVA_MEM} -Xss${JAVA_STACK} -Xbootclasspath/a:$JRUBY_HOME/lib/jruby.jar"
+
+# force file.encoding to UTF-8 :
+if [[ -z "$JAVA_ENCODING" ]]; then
+  JAVA_OPTS="${JAVA_OPTS} -Dfile.encoding=UTF-8"
+fi
+
+JAVA_PROPS="$JAVA_PROPS \
+  -Djruby.memory.max=$JAVA_MEM \
+  -Djruby.stack.max=$JAVA_STACK \
+  -Djruby.shell=$JRUBY_SHELL \
+  -Djffi.boot.library.path=$JRUBY_NATIVE_PATH \
   <%= @jruby_opts.join(' ') %> \
   $JRUBY_OPTS"
-
-JAVA_OPTS="-Xmx500m -Xss1024k -Xbootclasspath/a:$JRUBY_HOME/lib/jruby.jar"
+  
 PROC_NAME=${SCRIPT_NAME:-${APP_NAME:-"trinidad"}}
 
 JSVC_ARGS="-home $JAVA_HOME \
@@ -137,4 +161,3 @@ case "$1" in
       echo "Unrecognised command. Usage trinidad [ start | stop | restart ]"
       ;;
 esac
-
