@@ -58,7 +58,7 @@ module Trinidad
       def configure_unix_daemon(defaults)
         @java_home = defaults["java_home"] || ask_path('Java home?', default_java_home)
         unless @jsvc = defaults["jsvc_path"] || detect_jsvc_path
-          @jsvc = ask_path("path to jsvc binary (leave blank and we're try to compile)?", '')
+          @jsvc = ask_path("path to jsvc binary (leave blank and we'll try to compile)?", '')
           if @jsvc.empty? # unpack and compile :
             jsvc_unpack_dir = defaults["jsvc_unpack_dir"] || ask_path("dir where jsvc dist should be unpacked?", '/usr/local/src')
             @jsvc = compile_jsvc(jsvc_unpack_dir, @java_home)
@@ -125,7 +125,7 @@ module Trinidad
       def default_java_home
         ENV['JAVA_HOME'] || Java::JavaLang::System.get_property("java.home")
       end
-
+      
       def default_ruby_compat_version
         JRuby.runtime.is1_9 ? "RUBY1_9" : "RUBY1_8"
       end
@@ -173,7 +173,11 @@ module Trinidad
         jsvc_dir = File.expand_path('jsvc-unix-src', jsvc_unpack_dir)
         File.chmod(0755, File.join(jsvc_dir, "configure"))
         # ./configure
-        command = "cd #{jsvc_dir} && ./configure --with-java=#{java_home}"
+        unless jdk_home = detect_jdk_home(java_home)
+          warn "seems you only have a JRE installed, a JDK is needed to compile jsvc"
+          jdk_home = java_home # it's still worth trying
+        end
+        command = "cd #{jsvc_dir} && ./configure --with-java=#{jdk_home}"
         puts "configuring jsvc ..."
         command_output = `#{command}`
         if $?.exitstatus != 0
@@ -191,6 +195,19 @@ module Trinidad
         end
         
         File.expand_path('jsvc', jsvc_dir) # return path to compiled jsvc binary
+      end
+      
+      def detect_jdk_home(java_home = default_java_home)
+        # JDK has an include directory with headers :
+        if File.directory?(File.join(java_home, 'include'))
+          return java_home
+        end
+        # java_home might be a nested JDK path e.g. /opt/java/jdk/jre
+        jdk_home = File.dirname(java_home) # /opt/jdk/jre -> /opt/jdk
+        if File.exist?(File.join(jdk_home, 'bin/java'))
+          return jdk_home
+        end
+        nil
       end
       
       def bundled_prunsrv_path
