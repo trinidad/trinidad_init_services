@@ -29,7 +29,7 @@ Gem::Specification.new do |s|
   ## Specify any RDoc options here. You'll want to add your README and
   ## LICENSE files to the extra_rdoc_files list.
   s.rdoc_options = ["--charset=UTF-8"]
-  s.extra_rdoc_files = %w[README LICENSE]
+  s.extra_rdoc_files = %w[README.md LICENSE]
 
   ## List your runtime dependencies here. Runtime dependencies are those
   ## that are needed for an end user to actually USE your code.
@@ -54,8 +54,6 @@ Please now run:
 
 to complete the installation.
 
-NOTE: on linux/solaris gcc needs to be installed as jsvc will be compiled, you might
-      install jsvc using your package manager as well `sudo apt-get install jsvc`
 ------------------------------------------------------------------------------------
 
 TEXT
