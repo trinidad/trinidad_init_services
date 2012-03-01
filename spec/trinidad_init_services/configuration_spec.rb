@@ -1,6 +1,9 @@
 require File.expand_path('spec_helper', File.join(File.dirname(__FILE__), '..'))
+
 require 'yaml'
 require 'rbconfig'
+require 'fileutils'
+require 'java'
 
 describe Trinidad::InitServices::Configuration do
   
@@ -65,7 +68,37 @@ describe Trinidad::InitServices::Configuration do
       subject.configure(config_defaults.merge 'run_user' => username)
 
       init_file_content = File.read(init_file) rescue ''
-      init_file_content.match(/RUN_USER="#{username}"/).should be_true
+      init_file_content.should =~ /RUN_USER="#{username}"/
+    end
+
+    unless (`which make` rescue '').empty?
+      
+      before(:all) do
+        FileUtils.rm_r "/tmp/jsvc-unix-src" if File.exist? "/tmp/jsvc-unix-src"
+      end
+      
+      it "configures and compiles jsvc" do
+        config_options = config_defaults.merge 'jsvc_path' => nil
+        config_options['jsvc_unpack_dir'] = '/tmp'
+        
+        java_home = java.lang.System.get_property("java.home")
+        java_home = java_home[0...-4] if java_home[-4..-1] == '/jre'
+        config_options['java_home'] = java_home # need a JDK dir
+        
+        subject = Trinidad::InitServices::Configuration.new
+        subject.instance_eval do # a bit of stubbing/mocking :
+          def detect_jsvc_path; nil; end
+          def ask_path(path, default = nil) 
+            raise path unless path =~ /path to jsvc .*/; default
+          end
+        end
+        
+        subject.configure(config_options)
+
+        init_file_content = File.read(init_file) rescue ''
+        init_file_content.should =~ /JSVC=\/tmp\/jsvc\-unix\-src\/jsvc/
+      end
+      
     end
     
   end

@@ -1,5 +1,4 @@
 require File.expand_path('spec_helper', File.dirname(__FILE__))
-require 'trinidad_init_services'
 
 Trinidad::Daemon.module_eval do
   def server; @server; end

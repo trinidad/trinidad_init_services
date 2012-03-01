@@ -1,3 +1,5 @@
 pkg
 trinidad-daemon.sh
 .idea
+nbproject
+Gemfile.lock
