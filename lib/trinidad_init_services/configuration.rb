@@ -13,19 +13,12 @@ module Trinidad
         @stdout = stdout
       end
 
-      def initialize_paths
+      def initialize_paths(jruby_home = default_jruby_home)
         @trinidad_daemon_path = File.expand_path('../../trinidad/daemon.rb', __FILE__)
         @jars_path = File.expand_path('../../../trinidad-libs', __FILE__)
 
         @classpath = ['jruby-jsvc.jar', 'commons-daemon.jar'].map { |jar| File.join(@jars_path, jar) }
-        @classpath << File.join(@jruby_home, 'lib', 'jruby.jar')
-      end
-
-      def collect_windows_opts(options_ask, defaults)
-        options_ask << '(separated by `;`)'
-        name_ask = 'Service name? {Alphanumeric and spaces only}'
-        name_default = 'Trinidad'
-        @trinidad_name = defaults["trinidad_name"] || ask(name_ask, name_default)
+        @classpath << File.join(jruby_home, 'lib', 'jruby.jar')
       end
 
       def configure_jruby_opts
@@ -49,7 +42,7 @@ module Trinidad
         @jruby_home = defaults["jruby_home"] || ask_path('JRuby home?', default_jruby_home)
         @ruby_compat_version = defaults["ruby_compat_version"] || ask('Ruby 1.8.x or 1.9.x compatibility?', default_ruby_compat_version)
         @jruby_opts = configure_jruby_opts
-        initialize_paths
+        initialize_paths(@jruby_home)
 
         windows? ? configure_windows_service : configure_unix_daemon(defaults)
         puts 'Done.'
@@ -92,6 +85,13 @@ module Trinidad
         FileUtils.chmod(@run_user == '' ? 0744 : 0755, trinidad_file)
       end
 
+      def collect_windows_opts(options_ask, defaults)
+        options_ask << '(separated by `;`)'
+        name_ask = 'Service name? {Alphanumeric and spaces only}'
+        name_default = 'Trinidad'
+        @trinidad_name = defaults["trinidad_name"] || ask(name_ask, name_default)
+      end
+      
       def configure_windows_service
         srv_path = bundled_prunsrv_path
         trinidad_service_id = @trinidad_name.gsub(/\W/, '')
@@ -138,11 +138,7 @@ module Trinidad
         RbConfig::CONFIG['host_os'] =~ /darwin/i
       end
 
-      def ia64?
-        RbConfig::CONFIG['arch'] =~ /i686|ia64/i
-      end
-
-      def bundled_jsvc_path
+      def bundled_jsvc_path # only called on *nix
         jsvc = 'jsvc_' + (macosx? ? 'darwin' : 'linux')
         jsvc_path = File.join(@jars_path, jsvc)
         # linux version is no longer bundled - as long as it is not present jsvc 
@@ -150,7 +146,7 @@ module Trinidad
         File.exist?(jsvc_path) ? jsvc_path : nil
       end
 
-      def detect_jsvc_path
+      def detect_jsvc_path # only called on *nix
         jsvc_path = `which jsvc` # "/usr/bin/jsvc\n"
         jsvc_path.chomp!
         jsvc_path.empty? ? bundled_jsvc_path : jsvc_path
@@ -210,9 +206,16 @@ module Trinidad
         nil
       end
       
-      def bundled_prunsrv_path
-        prunsrv = 'prunsrv_' + (ia64? ? 'ia64' : 'amd64') + '.exe'
-        File.join(@jars_path, prunsrv)
+      def bundled_prunsrv_path(arch = java.lang.System.getProperty("os.arch"))
+        # "amd64", "i386", "x86", "x86_64"
+        path = 'windows'
+        if arch =~ /amd64/i # amd64
+          path += '/amd64'
+        elsif arch =~ /64/i # x86_64
+          path += '/ia64'
+        # else "i386", "x86"
+        end
+        File.join(@jars_path, path, 'prunsrv.exe')
       end
 
       def make_path_dir(path, error = nil)

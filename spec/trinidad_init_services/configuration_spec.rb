@@ -1,7 +1,6 @@
 require File.expand_path('spec_helper', File.join(File.dirname(__FILE__), '..'))
 
 require 'yaml'
-require 'rbconfig'
 require 'fileutils'
 require 'java'
 
@@ -32,7 +31,7 @@ describe Trinidad::InitServices::Configuration do
     
     init_file_content.match(/RUN_USER=""/).should be_true
   end
-
+  
   it "makes pid_file and log_file dirs" do
     pids_dir = File.join(tmp_dir, "pids")
     logs_dir = File.join(tmp_dir, "logs")
@@ -54,7 +53,7 @@ describe Trinidad::InitServices::Configuration do
     end
   end
   
-  if RbConfig::CONFIG['host_os'] !~ /mswin|mingw/i
+  if java.lang.System.getProperty('os.name') !~ /windows/i
 
     it "fails for non-existing run user" do
       username = random_username
@@ -102,6 +101,25 @@ describe Trinidad::InitServices::Configuration do
     end
     
   end
+  
+	it "resolves bundled bundled prunsrv.exe based on system arch" do
+    trinidad_libs = File.expand_path('trinidad-libs', File.join(File.dirname(__FILE__), '../..'))
+    subject = Trinidad::InitServices::Configuration.new
+    subject.initialize_paths
+    
+    path = subject.send :bundled_prunsrv_path, "amd64"
+    path.should == File.join(trinidad_libs, 'windows/amd64/prunsrv.exe')
+
+    path = subject.send :bundled_prunsrv_path, "x86_64"
+    path.should == File.join(trinidad_libs, 'windows/ia64/prunsrv.exe')
+    
+    path = subject.send :bundled_prunsrv_path, "i386"
+    path.should == File.join(trinidad_libs, 'windows/prunsrv.exe')
+    
+    path = subject.send :bundled_prunsrv_path, "x86"
+    path.should == File.join(trinidad_libs, 'windows/prunsrv.exe')
+  end
+  
   
   private
   
