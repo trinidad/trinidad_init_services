@@ -3,9 +3,7 @@ require 'trinidad'
 
 module Trinidad
   module Daemon
-    require 'trinidad_init_services/version'
-    VERSION = Trinidad::InitServices::VERSION
-
+    
     def init
     end
 
