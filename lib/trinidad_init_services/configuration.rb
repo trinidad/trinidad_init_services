@@ -93,7 +93,7 @@ module Trinidad
       end
       
       def configure_windows_service
-        srv_path = bundled_prunsrv_path
+        srv_path = detect_prunsrv_path
         trinidad_service_id = @trinidad_name.gsub(/\W/, '')
 
         command = %Q{//IS//#{trinidad_service_id} --DisplayName="#{@trinidad_name}" \
@@ -204,6 +204,13 @@ module Trinidad
           return jdk_home
         end
         nil
+      end
+      
+      def detect_prunsrv_path # only called on windows
+        prunsrv_path = `for %i in (prunsrv.exe) do @echo.%~$PATH:i`
+        # a kind of `which prunsrv.exe` (if not found returns "\n")
+        prunsrv_path.chomp!
+        prunsrv_path.empty? ? bundled_prunsrv_path : prunsrv_path
       end
       
       def bundled_prunsrv_path(arch = java.lang.System.getProperty("os.arch"))

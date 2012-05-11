@@ -70,7 +70,7 @@ describe Trinidad::InitServices::Configuration do
       init_file_content.should =~ /RUN_USER="#{username}"/
     end
 
-    unless (`which make` rescue '').empty?
+    unless (`which make` rescue '').chomp.empty?
       
       before(:all) do
         FileUtils.rm_r "/tmp/jsvc-unix-src" if File.exist? "/tmp/jsvc-unix-src"
