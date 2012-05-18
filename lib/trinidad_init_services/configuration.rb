@@ -1,8 +1,9 @@
 require 'erb'
 require 'java'
 require 'jruby'
-require 'rbconfig'
 require 'fileutils'
+require 'rbconfig'
+require 'shellwords'
 
 module Trinidad
   module InitServices
@@ -39,6 +40,7 @@ module Trinidad
         collect_windows_opts(options_ask, defaults) if windows?
 
         @trinidad_options << (defaults["trinidad_options"] || ask(options_ask, options_default))
+        @trinidad_options.map! { |opt| Shellwords.shellsplit(opt) }.flatten!
         @jruby_home = defaults["jruby_home"] || ask_path('JRuby home?', default_jruby_home)
         @ruby_compat_version = defaults["ruby_compat_version"] || ask('Ruby 1.8.x or 1.9.x compatibility?', default_ruby_compat_version)
         @jruby_opts = configure_jruby_opts
@@ -99,23 +101,23 @@ module Trinidad
         command = %Q{//IS//#{trinidad_service_id} --DisplayName="#{@trinidad_name}" \
 --Install=#{srv_path} --Jvm=auto --StartMode=jvm --StopMode=jvm \
 --StartClass=com.msp.procrun.JRubyService --StartMethod=start \
---StartParams="#{escape(@trinidad_daemon_path)};#{format_path(@trinidad_options)}" \
---StopClass=com.msp.procrun.JRubyService --StopMethod=stop --Classpath="#{format_path(@classpath)}" \
+--StartParams="#{escape_path(@trinidad_daemon_path)};#{format_options(@trinidad_options)}" \
+--StopClass=com.msp.procrun.JRubyService --StopMethod=stop --Classpath="#{format_options(@classpath)}" \
 --StdOutput=auto --StdError=auto \
 --LogPrefix="#{trinidad_service_id.downcase}" \
-++JvmOptions="#{format_path(@jruby_opts)}"
+++JvmOptions="#{format_options(@jruby_opts)}"
 }
         system "#{srv_path} #{command}"
       end
 
       private
 
-      def escape(path)
+      def escape_path(path)
         path.gsub(%r{/}, '\\')
       end
-
-      def format_path(option)
-        option.map {|o| escape(o)}.join(';')
+      
+      def format_options(options)
+        options.map { |opt| escape_path(opt) }.join(';')
       end
 
       def default_jruby_home
@@ -207,7 +209,7 @@ module Trinidad
       end
       
       def detect_prunsrv_path # only called on windows
-        prunsrv_path = `for %i in (prunsrv.exe) do @echo.%~$PATH:i`
+        prunsrv_path = `for %i in (prunsrv.exe) do @echo.%~$PATH:i` rescue ''
         # a kind of `which prunsrv.exe` (if not found returns "\n")
         prunsrv_path.chomp!
         prunsrv_path.empty? ? bundled_prunsrv_path : prunsrv_path

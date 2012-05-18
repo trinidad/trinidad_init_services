@@ -120,6 +120,37 @@ describe Trinidad::InitServices::Configuration do
     path.should == File.join(trinidad_libs, 'windows/prunsrv.exe')
   end
   
+  it "configures windows service" do
+    subject = Trinidad::InitServices::Configuration.new
+    subject.instance_eval do
+      def windows?; true; end
+      def macosx?; false; end
+      def system(command); @system_command = command; end
+      def system_command; @system_command; end
+    end
+    config_options = {
+      'app_path' => "C:/MyApp",
+      'ruby_compat_version' => "RUBY1_9",
+      'trinidad_name' => "Trinidad",
+      'trinidad_options' => "-e production -p 4242 ",
+      'java_home' => "C:/Program Files (x86)/jdk-1.7.0",
+      'jruby_home' => "C:/Program Files/jruby",
+    }
+    subject.configure(config_options)
+    subject.system_command.should_not be nil
+    subject.system_command.should =~ /--DisplayName="Trinidad"/
+    subject.system_command.should =~ /--StartParams=".*?\\daemon.rb;-d;C:\\MyApp;-e;production;-p;4242"/
+    subject.system_command.should =~ /--Classpath=\".*?\\jruby-jsvc.jar;.*?\\commons-daemon.jar;.*?\\jruby.jar/
+    subject.system_command.should =~ %r{
+      \+\+JvmOptions="
+        -Djruby.home=C:\\Program\ Files\\jruby;
+        -Djruby.lib=C:\\Program\ Files\\jruby\\lib;
+        -Djruby.script=jruby;
+        -Djruby.daemon.module.name=Trinidad;
+        -Djruby.compat.version=RUBY1_9
+      "
+    }x
+  end
   
   private
   
