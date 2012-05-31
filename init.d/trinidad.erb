@@ -32,6 +32,17 @@ TRINIDAD_OPTS="<%= @trinidad_options.join(" ") %>"
 PIDFILE=<%= @pid_file %>
 LOG_FILE=<%= @log_file %>
 
+# Create pidfile directory if missing
+# Todo: Remove PIDFILE_DIR creation once jsvc can be started
+# as root using the -user option without any issues.
+PIDFILE_DIR=$(dirname $PIDFILE)
+if [ ! -d "$PIDFILE_DIR" ] ; then
+  mkdir -p $PIDFILE_DIR
+  if [ ! -z "$RUN_USER" ] ; then
+    chown -R $RUN_USER $PIDFILE_DIR
+  fi
+fi
+
 # Implements the jsvc Daemon interface.
 MAIN_CLASS=com.msp.jsvc.JRubyDaemon
 
