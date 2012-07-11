@@ -244,7 +244,7 @@ module Trinidad
       end
 
       def ask(question, default = nil)
-        return nil if not @stdin.tty?
+        return default if not @stdin.tty?
 
         question << " [#{default}]" if default && !default.empty?
 
