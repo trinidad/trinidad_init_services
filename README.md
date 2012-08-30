@@ -23,6 +23,8 @@ command. An example configuration file might look like this:
     jruby_home: "/opt/jruby"
     ruby_compat_version: RUBY1_8
     trinidad_name: Trinidad
+    trinidad_service_id: TrinidadService
+    trinidad_service_desc: Trinidad Service Description
     jsvc_path: "/usr/bin/jsvc"
     java_home: "/opt/java"
     output_path: "/etc/init.d"
