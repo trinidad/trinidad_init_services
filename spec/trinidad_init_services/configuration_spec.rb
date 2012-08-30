@@ -132,13 +132,17 @@ describe Trinidad::InitServices::Configuration do
       'app_path' => "C:/MyApp",
       'ruby_compat_version' => "RUBY1_9",
       'trinidad_name' => "Trinidad",
+      'trinidad_service_id' => "TrinidadService",
+      'trinidad_service_desc' => "Trinidad Service Description",
       'trinidad_options' => "-e production -p 4242 ",
       'java_home' => "C:/Program Files (x86)/jdk-1.7.0",
       'jruby_home' => "C:/Program Files/jruby",
     }
     subject.configure(config_options)
     subject.system_command.should_not be nil
+    subject.system_command.should =~ /\/\/IS\/\/TrinidadService/
     subject.system_command.should =~ /--DisplayName="Trinidad"/
+    subject.system_command.should =~ /--Description="Trinidad Service Description"/
     subject.system_command.should =~ /--StartParams=".*?\\daemon.rb;-d;C:\\MyApp;-e;production;-p;4242"/
     subject.system_command.should =~ /--Classpath=\".*?\\jruby-jsvc.jar;.*?\\commons-daemon.jar;.*?\\jruby.jar/
     subject.system_command.should =~ %r{

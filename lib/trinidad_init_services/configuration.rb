@@ -92,19 +92,27 @@ module Trinidad
         name_ask = 'Service name? {Alphanumeric and spaces only}'
         name_default = 'Trinidad'
         @trinidad_name = defaults["trinidad_name"] || ask(name_ask, name_default)
+
+        id_ask = 'Service ID? {Alphanumeric and underscores only}'
+        id_default = @trinidad_name.gsub(/\s+/, '_').gsub(/\W/, '')
+        @trinidad_service_id = defaults["trinidad_service_id"] || ask(id_ask, id_default)
+
+        desc_ask = 'Service description? {Alphanumeric and spaces only}'
+        desc_default = 'Embedded Apache Tomcat running rack and rails applications'
+        @trinidad_service_desc = defaults["trinidad_service_desc"] || ask(desc_ask, desc_default)
       end
       
       def configure_windows_service
         srv_path = detect_prunsrv_path
-        trinidad_service_id = @trinidad_name.gsub(/\W/, '')
 
-        command = %Q{//IS//#{trinidad_service_id} --DisplayName="#{@trinidad_name}" \
+        command = %Q{//IS//#{@trinidad_service_id} --DisplayName="#{@trinidad_name}" \
+--Description="#{@trinidad_service_desc}" \
 --Install=#{srv_path} --Jvm=auto --StartMode=jvm --StopMode=jvm \
 --StartClass=com.msp.procrun.JRubyService --StartMethod=start \
 --StartParams="#{escape_path(@trinidad_daemon_path)};#{format_options(@trinidad_options)}" \
 --StopClass=com.msp.procrun.JRubyService --StopMethod=stop --Classpath="#{format_options(@classpath)}" \
 --StdOutput=auto --StdError=auto \
---LogPrefix="#{trinidad_service_id.downcase}" \
+--LogPrefix="#{@trinidad_service_id.downcase}" \
 ++JvmOptions="#{format_options(@jruby_opts)}"
 }
         system "#{srv_path} #{command}"
