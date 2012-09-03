@@ -7,11 +7,18 @@ require 'shellwords'
 
 module Trinidad
   module InitServices
-
     class Configuration
+      
+      def self.windows?
+        RbConfig::CONFIG['host_os'] =~ /mswin|mingw/i
+      end
+
+      def self.macosx?
+        RbConfig::CONFIG['host_os'] =~ /darwin/i
+      end
+      
       def initialize(stdin = STDIN, stdout = STDOUT)
-        @stdin = stdin
-        @stdout = stdout
+        @stdin, @stdout = stdin, stdout
       end
 
       def initialize_paths(jruby_home = default_jruby_home)
@@ -22,17 +29,7 @@ module Trinidad
         @classpath << File.join(jruby_home, 'lib', 'jruby.jar')
       end
 
-      def configure_jruby_opts
-        opts = []
-        opts << "-Djruby.home=#{@jruby_home}"
-        opts << "-Djruby.lib=#{File.join(@jruby_home, 'lib')}"
-        opts << "-Djruby.script=jruby"
-        opts << "-Djruby.daemon.module.name=Trinidad"
-        opts << "-Djruby.compat.version=#{@ruby_compat_version}"
-        opts
-      end
-
-      def configure(defaults={})
+      def configure(defaults = {})
         @app_path = defaults["app_path"] || ask_path('Application path?')
         @trinidad_options = ["-d #{@app_path}"]
         options_ask = 'Trinidad options?'
@@ -46,10 +43,20 @@ module Trinidad
         @jruby_opts = configure_jruby_opts
         initialize_paths(@jruby_home)
 
-        windows? ? configure_windows_service : configure_unix_daemon(defaults)
-        puts 'Done.'
+        message = windows? ? configure_windows_service : configure_unix_daemon(defaults)
+        say message if message.is_a?(String)
       end
 
+      def configure_jruby_opts
+        opts = []
+        opts << "-Djruby.home=#{@jruby_home}"
+        opts << "-Djruby.lib=#{File.join(@jruby_home, 'lib')}"
+        opts << "-Djruby.script=jruby"
+        opts << "-Djruby.daemon.module.name=Trinidad"
+        opts << "-Djruby.compat.version=#{@ruby_compat_version}"
+        opts
+      end
+      
       def configure_unix_daemon(defaults)
         @java_home = defaults["java_home"] || ask_path('Java home?', default_java_home)
         unless @jsvc = defaults["jsvc_path"] || detect_jsvc_path
@@ -57,7 +64,7 @@ module Trinidad
           if @jsvc.empty? # unpack and compile :
             jsvc_unpack_dir = defaults["jsvc_unpack_dir"] || ask_path("dir where jsvc dist should be unpacked?", '/usr/local/src')
             @jsvc = compile_jsvc(jsvc_unpack_dir, @java_home)
-            puts "jsvc binary available at: #{@jsvc} " + 
+            say "jsvc binary available at: #{@jsvc} " + 
                  "(consider adding it to $PATH if you plan to re-run trinidad_init_service)"
           end
         end
@@ -81,10 +88,11 @@ module Trinidad
           )
         ).result(binding)
 
-        puts "Moving trinidad to #{@output_path}"
+        say "moving trinidad to #{@output_path}"
         trinidad_file = File.join(@output_path, "trinidad")
         File.open(trinidad_file, 'w') { |file| file.write(daemon) }
         FileUtils.chmod(@run_user == '' ? 0744 : 0755, trinidad_file)
+        nil
       end
 
       def collect_windows_opts(options_ask, defaults)
@@ -116,6 +124,7 @@ module Trinidad
 ++JvmOptions="#{format_options(@jruby_opts)}"
 }
         system "#{srv_path} #{command}"
+        nil
       end
 
       private
@@ -139,15 +148,15 @@ module Trinidad
       def default_ruby_compat_version
         JRuby.runtime.is1_9 ? "RUBY1_9" : "RUBY1_8"
       end
-
+      
       def windows?
-        RbConfig::CONFIG['host_os'] =~ /mswin|mingw/i
+        self.class.windows?
       end
 
       def macosx?
-        RbConfig::CONFIG['host_os'] =~ /darwin/i
+        self.class.macosx?
       end
-
+      
       def bundled_jsvc_path # only called on *nix
         jsvc = 'jsvc_' + (macosx? ? 'darwin' : 'linux')
         jsvc_path = File.join(@jars_path, jsvc)
@@ -184,19 +193,19 @@ module Trinidad
           jdk_home = java_home # it's still worth trying
         end
         command = "cd #{jsvc_dir} && ./configure --with-java=#{jdk_home}"
-        puts "configuring jsvc ..."
+        say "configuring jsvc ..."
         command_output = `#{command}`
         if $?.exitstatus != 0
-          puts command_output
+          say command_output
           raise "`#{command}` failed with status: #{$?.exitstatus}"
         end
         
         # make
         command = "cd #{jsvc_dir} && make"
-        puts "compiling jsvc ..."
+        say "compiling jsvc ..."
         command_output = `#{command}`
         if $?.exitstatus != 0
-          puts command_output
+          say command_output
           raise "`#{command}` failed with status: #{$?.exitstatus}"
         end
         
@@ -242,7 +251,7 @@ module Trinidad
           FileUtils.mkdir_p dir, :mode => 0775
         rescue Errno::EACCES => e
           raise unless error
-          puts "#{error} (#{e})"
+          say "#{error} (#{e})"
         end
       end
       
@@ -252,30 +261,38 @@ module Trinidad
       end
 
       def ask(question, default = nil)
-        return default if not @stdin.tty?
+        return default if ! @stdin.tty? || @ask == false
 
-        question << " [#{default}]" if default && !default.empty?
+        question << " [#{default}]" if default && ! default.empty?
 
         result = nil
-
         while result.nil?
-          @stdout.print(question + "  ")
+          @stdout.print("#{question}  ")
           @stdout.flush
 
           result = @stdin.gets
 
           if result
             result.chomp!
-
-            result = case result
+            case result
             when /^$/
-              default
-            else
-              result
+              result = default
             end
           end
         end
-        return result
+        result
+      end
+      
+      def ask=(flag)
+        @ask = !!flag
+      end
+      
+      def say(msg)
+        puts msg unless @say == false
+      end
+      
+      def say=(flag)
+        @say = !!flag
       end
       
     end

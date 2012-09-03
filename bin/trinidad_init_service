@@ -1,11 +1,57 @@
 #!/usr/bin/env jruby
 
-require 'trinidad_init_services'
-
-if ARGV.size > 0
-  require 'yaml'
-  config = YAML.load File.read(ARGV[0])
-  Trinidad::InitServices::Configuration.new.configure(config)
-else
-  Trinidad::InitServices::Configuration.new.configure
+begin
+  require 'rubygems'
+rescue LoadError
 end
+require 'trinidad_init_services'
+require 'optparse'
+
+defaults = nil
+configuration = Trinidad::InitServices::Configuration.new
+
+opts = OptionParser.new do |opts|
+  opts.banner = "Usage: #{File.basename(__FILE__)} [options] [defaults]"
+  
+  opts.on('-h', '--help', 'print this help') do
+    puts opts
+    exit
+  end
+  
+  opts.on('-v', '--version', 'print version') do
+    begin
+      require 'trinidad'
+      puts("#{Trinidad::InitServices::VERSION} (trinidad-#{Trinidad::VERSION})")
+    rescue LoadError
+      puts("#{Trinidad::InitServices::VERSION} (trinidad not installed)")
+    end
+    exit(0)
+  end
+
+  opts.on('-d', '--defaults [YAML_FILE]', 'use passed file as defaults') do |config|
+    defaults = config
+  end
+  
+  opts.on('-s', '--silent', 'do not print output on console') do
+    configuration.say = false
+  end
+
+  opts.on('--no-ask', 'disable interactive (console) mode') do
+    configuration.ask = false
+  end
+  
+end
+
+opts.parse! ARGV
+
+if ARGV.size > 0 # trinidad_init_service /home/trinidad/defaults.yml
+  defaults = ARGV[0]
+  configuration.ask = false
+end
+
+if defaults
+  require 'yaml'
+  defaults = YAML.load File.read(defaults)
+end
+
+defaults ? configuration.configure(defaults) : configuration.configure
