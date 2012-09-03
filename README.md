@@ -102,4 +102,5 @@ called **Trinidad**.
 
 ## Copyright
 
-Copyright (c) 2011-2012 David Calavera<calavera@apache.org>. See LICENSE for details.
+Copyright (c) 2012 [Team Trinidad](https://github.com/trinidad). 
+See LICENSE (http://en.wikipedia.org/wiki/MIT_License) for details.
