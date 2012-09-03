@@ -92,7 +92,8 @@ module Trinidad
         trinidad_file = File.join(@output_path, "trinidad")
         File.open(trinidad_file, 'w') { |file| file.write(daemon) }
         FileUtils.chmod(@run_user == '' ? 0744 : 0755, trinidad_file)
-        nil
+        
+        "\nNOTE: you might want to: `[sudo] update-rc.d -f #{@output_path} defaults`"
       end
 
       def collect_windows_opts(options_ask, defaults)
@@ -124,9 +125,35 @@ module Trinidad
 ++JvmOptions="#{format_options(@jruby_opts)}"
 }
         system "#{srv_path} #{command}"
-        nil
+        
+        "\nNOTE: you may use prunsrv to manage your service, try running:\n" +
+        "#{srv_path} help"
       end
 
+      def uninstall(service)
+        windows? ? uninstall_windows_service(service) : uninstall_unix_daemon(service)
+      end
+      
+      def uninstall_windows_service(service_name)
+        srv_path = detect_prunsrv_path
+        system "#{srv_path} stop #{service_name}"
+        system "#{srv_path} delete #{service_name}"
+      end
+
+      def uninstall_unix_daemon(service)
+        name = File.basename(service) # e.g. /etc/init.d/trinidad
+        command = "update-rc.d -f #{name} remove"
+        system command
+      rescue => e
+        say "uninstall failed, try `sudo #{command}`"
+        raise e
+      ensure
+        unless File.exist?(service)
+          service = File.expand_path(service, '/etc/init.d')
+        end
+        FileUtils.rm(service) if File.exist?(service)
+      end
+      
       private
 
       def escape_path(path)

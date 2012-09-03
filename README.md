@@ -91,13 +91,26 @@ This can be configured with the `JSVC_ARGS_EXTRA` environment variable, like thi
 
 It not recommended that you mix the `-user` flag with the `run_user` option !
 
+#### Uninstall
+
+Manage as every other rc.d, assuming `update-rc.d -f /etc/init.d/trinidad defaults`
+you can uninstall using :
+
+    $ [sudo] trinidad_init_service --uninstall /etc/init.d/trinidad
+
 
 ### Windows
 
 #### Execution
 
 Open the **Services** panel under **Administrative Tools** and look for a service 
-called **Trinidad**.
+called **Trinidad** (or whatever name you have chosen).
+
+#### Uninstall
+
+To remove the service you're going to need the service id (name), than run :
+
+    $ trinidad_init_service --uninstall Trinidad
 
 
 ## Copyright

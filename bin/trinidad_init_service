@@ -28,7 +28,7 @@ opts = OptionParser.new do |opts|
     exit(0)
   end
 
-  opts.on('-d', '--defaults [YAML_FILE]', 'use passed file as defaults') do |config|
+  opts.on('-d', '--defaults YAML_FILE', 'use passed file as defaults') do |config|
     defaults = config
   end
   
@@ -38,6 +38,11 @@ opts = OptionParser.new do |opts|
 
   opts.on('--no-ask', 'disable interactive (console) mode') do
     configuration.ask = false
+  end
+
+  opts.on('--uninstall NAME', 'remove installed init service') do |name|
+    configuration.uninstall(name)
+    exit(0)
   end
   
 end
