@@ -313,6 +313,7 @@ module Trinidad
       def ask=(flag)
         @ask = !!flag
       end
+      public :ask=
       
       def say(msg)
         puts msg unless @say == false
@@ -321,6 +322,7 @@ module Trinidad
       def say=(flag)
         @say = !!flag
       end
+      public :say=
       
     end
   end

@@ -156,6 +156,25 @@ describe Trinidad::InitServices::Configuration do
     }x
   end
   
+	it "ask= forces trinidad to not ask on tty" do
+    subject.ask = false
+    outcome = subject.send :ask, 'hello?', :there
+    outcome.should == :there
+
+    outcome = subject.send :ask, 'de-ja-vu?', nil
+    outcome.should be nil
+  end
+
+	it "say= silences standard output" do
+    def subject.puts(msg)
+      raise msg
+    end
+    lambda { subject.send :say, 'hello' }.should raise_error
+    
+    subject.say = false
+    lambda { subject.send :say, 'hello' }.should_not raise_error
+  end
+  
   private
   
     def config_defaults
