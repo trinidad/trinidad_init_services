@@ -65,7 +65,10 @@ if [ -d "$JRUBY_HOME/lib/native/" ]; then
   done
 fi
 
-if [ -z "$JAVA_MEM" ] ; then
+# Allow TRINIDAD_JAVA_MEM as JAVA_MEM is interpreted differently by jruby
+if [ "$TRINIDAD_JAVA_MEM" ] ; then
+  JAVA_MEM=$TRINIDAD_JAVA_MEM
+elif [ -z "$JAVA_MEM" ] ; then
   JAVA_MEM=500m
 fi
 
