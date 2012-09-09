@@ -1,14 +1,9 @@
 #!/usr/bin/env bash
-# Generic script for running ruby scripts as daemons using
-# jsvc and a java class to control the daemon.
+# Trinidad init.d script using `jsvc` customized from the jsvc-wrapper.sh
+# http://github.com/nicobrevin/jruby-jsvc/blob/master/bin/jsvc-wrapper.sh
 #
-# Contains common parameters and start/stop
-
-# Things you'll need to set on a per script/daemon basis:
+# set on a per script/daemon basis (optional) :
 # APP_NAME - name of your application (defaults to "trinidad")
-#
-# Things you can set:
-# PROG_OPTS - Arguments to send to the program. A few defaults are appended to this.
 
 # https://github.com/trinidad/trinidad_init_services/wiki/Installing-JSVC
 JSVC=<%= @jsvc %>
@@ -65,24 +60,40 @@ if [ -d "$JRUBY_HOME/lib/native/" ]; then
   done
 fi
 
+# JAVA_MEM, JAVA_MEM_MIN & JAVA_STACK are compatible with jruby's binary
+
 if [ -z "$JAVA_MEM" ] ; then
-  JAVA_MEM=500m
+  JAVA_MEM=-Xmx500m
+fi
+# backwards compatibility we accept the non-full option (e.g. JAVA_MEM=500m)
+if [[ "$JAVA_MEM" != "-Xmx"* ]] ; then
+  JAVA_MEM="-Xmx$JAVA_MEM"
+fi
+
+# we accept the non-full option (e.g. JAVA_MEM_MIN=500m)
+if [[ -n "$JAVA_MEM_MIN" && "$JAVA_MEM_MIN" != "-Xms"* ]] ; then
+  JAVA_MEM_MIN="-Xms$JAVA_MEM_MIN"
+fi
+if [ -z "$JAVA_MEM_MIN" ] ; then
+  JAVA_MEM_MIN=""
 fi
 
 if [ -z "$JAVA_STACK" ] ; then
-  JAVA_STACK=2048k
+  JAVA_STACK=-Xss2048k
+fi
+# backwards compatibility we accept the non-full option (e.g. JAVA_STACK=2048k)
+if [[ "$JAVA_STACK" != "-Xss"* ]] ; then
+  JAVA_STACK="-Xss$JAVA_STACK"
 fi
 
-JAVA_OPTS="-Xmx${JAVA_MEM} -Xss${JAVA_STACK} -Xbootclasspath/a:$JRUBY_HOME/lib/jruby.jar"
+JAVA_OPTS="$JAVA_MEM $JAVA_MEM_MIN $JAVA_STACK -Xbootclasspath/a:$JRUBY_HOME/lib/jruby.jar"
 
 # force file.encoding to UTF-8 :
 if [[ -z "$JAVA_ENCODING" ]]; then
-  JAVA_OPTS="${JAVA_OPTS} -Dfile.encoding=UTF-8"
+  JAVA_OPTS="$JAVA_OPTS -Dfile.encoding=UTF-8"
 fi
 
 JAVA_PROPS="$JAVA_PROPS \
-  -Djruby.memory.max=$JAVA_MEM \
-  -Djruby.stack.max=$JAVA_STACK \
   -Djruby.shell=$JRUBY_SHELL \
   -Djffi.boot.library.path=$JRUBY_NATIVE_PATH \
   <%= @jruby_opts.join(' ') %> \
