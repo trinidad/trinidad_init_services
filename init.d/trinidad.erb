@@ -43,10 +43,6 @@ MAIN_CLASS=com.msp.jsvc.JRubyDaemon
 
 CLASSPATH=<%= @classpath.join(":") %>
 
-if [ -z "$JRUBY_OPTS" ] ; then
-  JRUBY_OPTS=""
-fi
-
 JRUBY_SHELL=/bin/sh
 
 JRUBY_NATIVE_PATH=""
@@ -86,6 +82,9 @@ if [[ "$JAVA_STACK" != "-Xss"* ]] ; then
   JAVA_STACK="-Xss$JAVA_STACK"
 fi
 
+# A custom (daemon) script will be started (not jruby -S) thus JRUBY_OPTS
+# won't be used here, feel free to hand tune JAVA_OPTS here instead ...
+
 JAVA_OPTS="$JAVA_MEM $JAVA_MEM_MIN $JAVA_STACK -Xbootclasspath/a:$JRUBY_HOME/lib/jruby.jar"
 
 # force file.encoding to UTF-8 :
@@ -96,8 +95,7 @@ fi
 JAVA_PROPS="$JAVA_PROPS \
   -Djruby.shell=$JRUBY_SHELL \
   -Djffi.boot.library.path=$JRUBY_NATIVE_PATH \
-  <%= @jruby_opts.join(' ') %> \
-  $JRUBY_OPTS"
+  <%= @jruby_opts.join(' ') %> "
   
 PROC_NAME=${SCRIPT_NAME:-${APP_NAME:-"trinidad"}}
 
@@ -134,7 +132,7 @@ case "$1" in
           $START_COMMAND
           EXIT_CODE=$?
           if [ "$EXIT_CODE" != 0 ]; then
-        echo "Daemon exited with status: $EXIT_CODE. Check pidfile and log"
+              echo "Daemon exited with status: $EXIT_CODE. Check pidfile and log"
           fi
       fi
       ;;
@@ -162,7 +160,7 @@ case "$1" in
           $START_COMMAND
           EXIT_CODE=$?
           if [ "$EXIT_CODE" != 0 ]; then
-        echo "Daemon exited with status: $EXIT_CODE. Check pidfile and log"
+              echo "Daemon exited with status: $EXIT_CODE. Check pidfile and log"
           fi
       fi
       ;;
@@ -171,9 +169,9 @@ case "$1" in
           PID=`cat $PIDFILE`
           OUTPUT=`ps $PID | egrep "^$PID "`
           if [ ${#OUTPUT} -gt 0 ]; then
-        echo "Service running with pid: $PID"
+              echo "Service running with pid: $PID"
           else
-        echo "Pidfile present, but process not running"
+              echo "Pidfile present, but process not running"
           fi
       else
           echo "No pidfile present"
