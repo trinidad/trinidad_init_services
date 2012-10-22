@@ -156,6 +156,24 @@ describe Trinidad::InitServices::Configuration do
     }x
   end
   
+	it "ask_path works when non tty and default nil" do
+    subject.ask = false
+    stdin = mock('stdin')
+    stdin.stubs(:tty?).returns false
+    subject.instance_variable_set(:@stdin, stdin)
+    subject.send(:ask_path, 'Home', nil).should be nil
+  end
+
+	it "ask_path raises when non tty and default false" do
+    subject.ask = false
+    stdin = mock('stdin')
+    stdin.stubs(:tty?).returns false
+    subject.instance_variable_set(:@stdin, stdin)
+    expect( lambda {
+      subject.send(:ask_path, 'Home', false)
+    } ).to raise_error RuntimeError
+  end
+  
 	it "ask= forces trinidad to not ask on tty" do
     subject.ask = false
     outcome = subject.send :ask, 'hello?', :there
@@ -164,7 +182,7 @@ describe Trinidad::InitServices::Configuration do
     outcome = subject.send :ask, 'de-ja-vu?', nil
     outcome.should be nil
   end
-
+  
 	it "say= silences standard output" do
     def subject.puts(msg)
       raise msg

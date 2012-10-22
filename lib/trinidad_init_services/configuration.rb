@@ -30,7 +30,7 @@ module Trinidad
       end
 
       def configure(defaults = {})
-        @app_path = defaults["app_path"] || ask_path('Application path?')
+        @app_path = defaults["app_path"] || ask_path('Application path', false)
         @trinidad_options = ["-d #{@app_path}"]
         options_ask = 'Trinidad options?'
         options_default = '-e production'
@@ -38,8 +38,8 @@ module Trinidad
 
         @trinidad_options << (defaults["trinidad_options"] || ask(options_ask, options_default))
         @trinidad_options.map! { |opt| Shellwords.shellsplit(opt) }.flatten!
-        @jruby_home = defaults["jruby_home"] || ask_path('JRuby home?', default_jruby_home)
-        @ruby_compat_version = defaults["ruby_compat_version"] || ask('Ruby 1.8.x or 1.9.x compatibility?', default_ruby_compat_version)
+        @jruby_home = defaults["jruby_home"] || ask_path('JRuby home', default_jruby_home)
+        @ruby_compat_version = defaults["ruby_compat_version"] || ask('Ruby 1.8.x or 1.9.x compatibility', default_ruby_compat_version)
         @jruby_opts = configure_jruby_opts
         initialize_paths(@jruby_home)
 
@@ -58,20 +58,20 @@ module Trinidad
       end
       
       def configure_unix_daemon(defaults)
-        @java_home = defaults["java_home"] || ask_path('Java home?', default_java_home)
+        @java_home = defaults["java_home"] || ask_path('Java home', default_java_home)
         unless @jsvc = defaults["jsvc_path"] || detect_jsvc_path
-          @jsvc = ask_path("path to jsvc binary (leave blank and we'll try to compile)?", '')
+          @jsvc = ask_path("path to jsvc binary (leave blank and we'll try to compile)", '')
           if @jsvc.empty? # unpack and compile :
-            jsvc_unpack_dir = defaults["jsvc_unpack_dir"] || ask_path("dir where jsvc dist should be unpacked?", '/usr/local/src')
+            jsvc_unpack_dir = defaults["jsvc_unpack_dir"] || ask_path("dir where jsvc dist should be unpacked", '/usr/local/src')
             @jsvc = compile_jsvc(jsvc_unpack_dir, @java_home)
             say "jsvc binary available at: #{@jsvc} " + 
                  "(consider adding it to $PATH if you plan to re-run trinidad_init_service)"
           end
         end
-        @output_path = defaults["output_path"] || ask_path('init.d output path?', '/etc/init.d')
-        @pid_file = defaults["pid_file"] || ask_path('pid file?', '/var/run/trinidad/trinidad.pid')
-        @log_file = defaults["log_file"] || ask_path('log file?', '/var/log/trinidad/trinidad.log')
-        @run_user = defaults["run_user"] || ask('run daemon as user (enter a non-root username or leave blank)?', '')
+        @output_path = defaults["output_path"] || ask_path('init.d output path', '/etc/init.d')
+        @pid_file = defaults["pid_file"] || ask_path('pid file', '/var/run/trinidad/trinidad.pid')
+        @log_file = defaults["log_file"] || ask_path('log file', '/var/log/trinidad/trinidad.log')
+        @run_user = defaults["run_user"] || ask('run daemon as user (enter a non-root username or leave blank)', '')
         
         if @run_user != '' && `id -u #{@run_user}` == ''
           raise ArgumentError, "user '#{@run_user}' does not exist (leave blank if you're planning to `useradd' later)"
@@ -107,7 +107,7 @@ module Trinidad
         @trinidad_service_id = defaults["trinidad_service_id"] || ask(id_ask, id_default)
 
         desc_ask = 'Service description? {Alphanumeric and spaces only}'
-        desc_default = 'Embedded Apache Tomcat running rack and rails applications'
+        desc_default = 'Embedded Apache Tomcat running Rack and Rails applications'
         @trinidad_service_desc = defaults["trinidad_service_desc"] || ask(desc_ask, desc_default)
       end
       
@@ -284,13 +284,18 @@ module Trinidad
       
       def ask_path(question, default = nil)
         path = ask(question, default)
+        unless path # nil, false
+          raise "#{question.inspect} not provided!" if path == false
+          return path # nil
+        end
         path.empty? ? path : File.expand_path(path)
       end
 
       def ask(question, default = nil)
         return default if ! @stdin.tty? || @ask == false
-
-        question << " [#{default}]" if default && ! default.empty?
+        
+        question = "#{question}?" unless question.index('?')
+        question += " [#{default}]" if default && ! default.empty?
 
         result = nil
         while result.nil?
