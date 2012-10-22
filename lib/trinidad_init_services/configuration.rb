@@ -200,7 +200,11 @@ module Trinidad
       
       def compile_jsvc(jsvc_unpack_dir, java_home = default_java_home)
         unless File.exist?(jsvc_unpack_dir)
-          raise "specified path does not exist: #{jsvc_unpack_dir.inspect}"
+          begin
+            FileUtils.mkdir(jsvc_unpack_dir)
+          rescue
+            raise "specified path does not exist: #{jsvc_unpack_dir.inspect}"
+          end
         end
         unless File.directory?(jsvc_unpack_dir)
           raise "specified path: #{jsvc_unpack_dir.inspect} is not a directory"
