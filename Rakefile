@@ -1,31 +1,10 @@
-require 'rubygems'
-require 'rake'
-require 'date'
-
-#############################################################################
-#
-# Helper functions
-#
-#############################################################################
-
-def name
-  @name ||= Dir['*.gemspec'].first.split('.').first
+begin
+  require 'bundler/gem_helper'
+rescue LoadError => e
+  require('rubygems') && retry
+  raise e
 end
-
-$:.push File.expand_path("../lib", __FILE__)
-
-def version
-  require 'trinidad_init_services/version'
-  Trinidad::InitServices::VERSION
-end
-
-def gemspec_file
-  "#{name}.gemspec"
-end
-
-def gem_file
-  "#{name}-#{version}.gem"
-end
+Bundler::GemHelper.install_tasks
 
 #############################################################################
 #
@@ -38,67 +17,4 @@ task :default => :spec
 require 'rspec/core/rake_task'
 RSpec::Core::RakeTask.new(:spec) do |spec|
   spec.rspec_opts = ['--color', "--format documentation"]
-end
-
-require 'rake/rdoctask'
-Rake::RDocTask.new do |rdoc|
-  rdoc.rdoc_dir = 'rdoc'
-  rdoc.title = "#{name} #{version}"
-  rdoc.rdoc_files.include('README*')
-  rdoc.rdoc_files.include('lib/**/*.rb')
-end
-
-desc "Open an irb session preloaded with this library"
-task :console do
-  sh "irb -rubygems -r ./lib/#{name}.rb"
-end
-
-#############################################################################
-#
-# Custom tasks (add your own tasks here)
-#
-#############################################################################
-
-
-
-#############################################################################
-#
-# Packaging tasks
-#
-#############################################################################
-
-desc 'Release gem'
-task :release => :build do
-  unless `git branch` =~ /^\* master$/
-    puts "You must be on the master branch to release!"
-    exit!
-  end
-  sh "git commit --allow-empty -a -m 'Release #{version}'"
-  sh "git tag v#{version}"
-  sh "git push origin master --tags"
-  sh "gem push pkg/#{gem_file}"
-end
-
-desc 'Build gem'
-task :build do
-  sh "mkdir -p pkg"
-  sh "gem build #{gemspec_file}"
-  sh "mv #{gem_file} pkg"
-end
-
-desc 'Install gem'
-task :install => :build do
-  sh "gem install pkg/#{gem_file}"
-end
-
-task :validate do
-  libfiles = Dir['lib/*'] - ["lib/#{name}.rb", "lib/#{name}"]
-  unless libfiles.empty?
-    puts "Directory `lib` should only contain a `#{name}.rb` file and `#{name}` dir."
-    exit!
-  end
-  unless Dir['VERSION*'].empty?
-    puts "A `VERSION` file at root level violates Gem best practices."
-    exit!
-  end
 end

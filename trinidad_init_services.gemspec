@@ -3,10 +3,6 @@ $:.push File.expand_path("../lib", __FILE__)
 require 'trinidad_init_services/version'
 
 Gem::Specification.new do |s|
-  s.specification_version = 2 if s.respond_to? :specification_version=
-  s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
-  s.rubygems_version = '1.3.5'
-  
   s.name              = 'trinidad_init_services'
   s.version           = Trinidad::InitServices::VERSION
   s.rubyforge_project = 'trinidad_init_services'
@@ -29,13 +25,13 @@ Gem::Specification.new do |s|
   ## Specify any RDoc options here. You'll want to add your README and
   ## LICENSE files to the extra_rdoc_files list.
   s.rdoc_options = ["--charset=UTF-8"]
-  s.extra_rdoc_files = %w[README.md LICENSE]
+  s.extra_rdoc_files = %w[ README.md LICENSE ]
 
   ## List your runtime dependencies here. Runtime dependencies are those
   ## that are needed for an end user to actually USE your code.
-  s.add_dependency('trinidad', '>= 1.3.2')
+  s.add_dependency('trinidad', '>= 1.3.5')
 
-  s.add_development_dependency('rspec', '>= 2.7.1')
+  s.add_development_dependency('rspec', '>= 2.10')
   s.add_development_dependency('mocha', '>= 0.10')
   
   s.files = `git ls-files`.split("\n")
