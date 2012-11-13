@@ -167,7 +167,7 @@ case "$1" in
     status)
       if [ "$PIDFILE" ]; then
           PID=`cat $PIDFILE`
-          OUTPUT=`ps -p $PID`
+          OUTPUT=`ps -o pid $PID | grep "$PID"`
           if [ ${#OUTPUT} -gt 0 ]; then
               echo "Service running with pid: $PID"
           else
