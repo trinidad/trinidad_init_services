@@ -14,7 +14,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-/* @version $Id: home.c 1000002 2010-09-22 14:48:37Z mturk $ */
+/* @version $Id: home.c 1416921 2012-12-04 13:09:44Z mturk $ */
 #include "jsvc.h"
 
 /* Check if a path is a directory */
@@ -212,9 +212,13 @@ static home_data *find(char *path)
     home_data *data = NULL;
     int x = 0;
 
-    if (path == NULL) {
+    if (path == NULL || *path == '\0' || strcmp(path, "/") == 0) {
         log_debug("Home not specified on command line, using environment");
         path = getenv("JAVA_HOME");
+        if (path == NULL || *path == '\0' || strcmp(path, "/") == 0) {
+            /* guard against empty JAVA_HOME */
+            path = NULL;
+        }
     }
 
     if (path == NULL) {

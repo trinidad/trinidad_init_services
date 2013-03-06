@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-/* @version $Id: location.c 1199195 2011-11-08 11:30:20Z mturk $ */
+/* @version $Id: location.c 1419313 2012-12-10 10:05:19Z mturk $ */
 #include "jsvc.h"
 
 /* Locations of various JVM files. We have to deal with all this madness since
@@ -33,10 +33,20 @@ char *location_home[] = {
     "/System/Library/Frameworks/JavaVM.framework/Home",
     "/System/Library/Frameworks/JavaVM.framework/Versions/CurrentJDK/Home/",
 #elif defined(OS_LINUX) || defined(OS_SOLARIS) || defined(OS_BSD)
+    "/usr/java/default",
     "/usr/java",
     "/usr/local/java",
+    "/usr/lib/jvm/default-java",
+    "/usr/lib/jvm/java",
     "/etc/alternatives/java_sdk",
+    "/etc/alternatives/java_sdk_openjdk",
     "/etc/alternatives/jre",
+#if defined(__LP64__)
+    "/lib64/jvm/java",
+    "/lib64/jvm/java-openjdk",
+#endif
+    "/lib/jvm/java",
+    "/lib/jvm/java-openjdk",
 #elif defined(OS_CYGWIN)
     "/cygdrive/c/WINNT/system32/java",
 #elif defined(OS_SYSV)

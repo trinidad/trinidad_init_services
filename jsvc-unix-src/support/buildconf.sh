@@ -16,7 +16,7 @@
 # limitations under the License.
 
 # @author  Pier Fumagalli <mailto:pier.fumagalli@eng.sun.com>
-# @version $Id: buildconf.sh 480475 2006-11-29 08:31:47Z bayard $
+# @version $Id: buildconf.sh 1433971 2013-01-16 15:08:47Z sebb $
 
 # The cache of automake always brings problems when changing *.m4 files.
 rm -rf autom4te.cache

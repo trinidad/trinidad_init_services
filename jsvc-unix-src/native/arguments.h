@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-/* @version $Id: arguments.h 1196265 2011-11-01 20:43:52Z mturk $ */
+/* @version $Id: arguments.h 1412037 2012-11-21 10:01:22Z mturk $ */
 #ifndef __JSVC_ARGUMENTS_H__
 #define __JSVC_ARGUMENTS_H__
 
@@ -35,6 +35,8 @@ typedef struct {
     char *name;
     /** The JDK or JRE installation path (JAVA_HOME). */
     char *home;
+    /** Working directory (defaults to /). */
+    char *cwd;
     /** Options used to invoke the JVM. */
     char **opts;
     /** Number of JVM options. */

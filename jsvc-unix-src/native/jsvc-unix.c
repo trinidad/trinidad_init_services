@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-/* @version $Id: jsvc-unix.c 1293002 2012-02-23 22:48:24Z mturk $ */
+/* @version $Id: jsvc-unix.c 1412037 2012-11-21 10:01:22Z mturk $ */
 #include "jsvc.h"
 
 #include <signal.h>
@@ -247,12 +247,23 @@ static fd_cap_set_flag fp_cap_set_flag;
 static fd_cap_set_proc fp_cap_set_proc;
 
 static const char *libcap_locs[] = {
+#ifdef __LP64__
+    "/lib64/libcap.so.2",
+    "/lib64/libcap.so.1",
+    "/lib64/libcap.so",
+    "/usr/lib64/libcap.so.2",
+    "/usr/lib64/libcap.so.1",
+    "/usr/lib64/libcap.so",
+#endif
     "/lib/libcap.so.2",
     "/lib/libcap.so.1",
     "/lib/libcap.so",
     "/usr/lib/libcap.so.2",
     "/usr/lib/libcap.so.1",
     "/usr/lib/libcap.so",
+    "libcap.so.2",
+    "libcap.so.1",
+    "libcap.so",
     NULL
 };
 
@@ -487,6 +498,56 @@ static sighandler_t signal_set(int sig, sighandler_t newHandler)
     return hand;
 }
 
+static int mkdir0(const char *name, int perms)
+{
+    if (mkdir(name, perms) == 0)
+        return 0;
+    else
+        return errno;
+}
+
+static int mkdir1(char *name, int perms)
+{
+    int rc;
+
+    rc = mkdir0(name, perms);
+    if (rc == EEXIST)
+        return 0;
+    if (rc == ENOENT) {  /* Missing an intermediate dir */
+        char *pos;
+        if ((pos = strrchr(name, '/'))) {
+            *pos = '\0';
+            if (*name) {
+                if (!(rc = mkdir1(name, perms))) {
+                    /* Try again, now with parents created
+                     */
+                    *pos = '/';
+                    rc = mkdir0(name, perms);
+                }
+            }
+            *pos = '/';
+        }
+    }
+    return rc;
+}
+
+static int mkdir2(const char *name, int perms)
+{
+    int rc = 0;
+    char *pos;
+    char *dir = strdup(name);
+
+    if (!dir)
+        return ENOMEM;
+    if ((pos = strrchr(dir, '/'))) {
+        *pos = '\0';
+        if (*dir)
+            rc = mkdir1(dir, perms);
+    }
+    free(dir);
+    return rc;
+}
+
 /*
  * Check pid and if still running
  */
@@ -498,9 +559,16 @@ static int check_pid(arg_data *args)
     char buff[80];
     pid_t pidn = getpid();
     int i, pid;
+    int once = 0;
 
-    fd = open(args->pidf, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+retry:
+    fd = open(args->pidf, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if (fd < 0) {
+        if (once == 0 && (errno == ENOTDIR || errno == ENOENT)) {
+            once = 1;
+            if (mkdir2(args->pidf, S_IRWXU | S_IXGRP | S_IRGRP | S_IXOTH | S_IROTH) == 0)
+                goto retry;
+        }
         log_error("Cannot open PID file %s, PID is %d", args->pidf, pidn);
         return -1;
     }
@@ -847,6 +915,7 @@ static FILE *loc_freopen(char *outfile, char *mode, FILE * stream)
 {
     FILE *ftest;
 
+    mkdir2(outfile, S_IRWXU);
     ftest = fopen(outfile, mode);
     if (ftest == NULL) {
         fprintf(stderr, "Unable to redirect to %s\n", outfile);
@@ -1154,6 +1223,10 @@ int main(int argc, char *argv[])
 #endif
     }
 
+    if (chdir(args->cwd)) {
+        log_error("ERROR: jsvc was unable to "
+                  "change directory to: %s", args->cwd);
+    }
     /*
      * umask() uses inverse logic; bits are CLEAR for allowed access.
      */

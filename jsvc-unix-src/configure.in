@@ -17,7 +17,7 @@ dnl
 
 dnl -------------------------------------------------------------------------
 dnl Author  Pier Fumagalli <mailto:pier.fumagalli@eng.sun.com>
-dnl Version $Id: configure.in 1292683 2012-02-23 07:37:10Z mturk $
+dnl Version $Id: configure.in 1411560 2012-11-20 06:30:13Z mturk $
 dnl -------------------------------------------------------------------------
 
 dnl -------------------------------------------------------------------------
@@ -59,8 +59,12 @@ AP_MSG_HEADER([Host support])
 AP_SUPPORTED_HOST()
 if test "$supported_os" = "darwin"
 then
+  if test -z "$JAVA_HOME" -a -x /usr/libexec/java_home
+  then
+    JAVA_HOME="`/usr/libexec/java_home 2>dev/null`"
+  fi
   if test -z "$JAVA_HOME" -a -d /System/Library/Frameworks/JavaVM.framework/Home; then
-  	JAVA_HOME=/System/Library/Frameworks/JavaVM.framework/Home
+    JAVA_HOME=/System/Library/Frameworks/JavaVM.framework/Home
   fi
 
   _prevdir=`/bin/pwd`
