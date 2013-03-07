@@ -96,7 +96,7 @@ JAVA_PROPS="$JAVA_PROPS \
   -Djruby.shell=$JRUBY_SHELL \
   -Djffi.boot.library.path=$JRUBY_NATIVE_PATH \
   <%= @jruby_opts.join(' ') %> "
-  
+
 PROC_NAME=${SCRIPT_NAME:-${APP_NAME:-"trinidad"}}
 
 JSVC_ARGS="-home $JAVA_HOME \
@@ -107,7 +107,7 @@ JSVC_ARGS="-home $JAVA_HOME \
   -jvm server
   -outfile $LOG_FILE \
   -errfile &1"
-  
+
 #
 # Stop/Start
 #
@@ -124,8 +124,16 @@ cd $APP_PATH || exit 1
 case "$1" in
     start)
       if [ -e "$PIDFILE" ]; then
-          echo "Pidfile already exists, not starting."
-          exit 1
+          CUR_PID=$(<"$PIDFILE")
+          COM_NAME=$(ps -p $CUR_PID -o command= | cut -d ' ' -f 1)
+          PROCESS_NAME="jsvc-$PROC_NAME"
+          if [ "$COM_NAME" != "$PROCESS_NAME" ]; then
+              rm $PIDFILE
+              $START_COMMAND
+          else
+              echo "Pidfile already exists for pid $CUR_PID, not starting."
+              exit 1
+          fi
       else
           echo "Starting $PROC_NAME daemon..."
           if [ -n "$ECHO_COMMAND" ]; then echo $START_COMMAND; fi
