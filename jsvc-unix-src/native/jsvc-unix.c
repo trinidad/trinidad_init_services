@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-/* @version $Id: jsvc-unix.c 1412037 2012-11-21 10:01:22Z mturk $ */
+/* @version $Id: jsvc-unix.c 1460687 2013-03-25 14:44:32Z mturk $ */
 #include "jsvc.h"
 
 #include <signal.h>
@@ -1158,6 +1158,16 @@ int main(int argc, char *argv[])
         char *tmp = NULL;
         char *p1  = NULL;
         char *p2  = NULL;
+
+        /* We don't want to use a form of exec() that searches the
+         * PATH, so require that argv[0] be either an absolute or
+         * relative path.  Error out if this isn't the case.
+         */
+        tmp = strchr(argv[0], '/');
+        if (tmp == NULL) {
+            log_error("JSVC re-exec requires execution with an absolute or relative path");
+            return 1;
+        }
 
         /*
          * There is no need to change LD_LIBRARY_PATH

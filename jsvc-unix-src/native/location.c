@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-/* @version $Id: location.c 1419313 2012-12-10 10:05:19Z mturk $ */
+/* @version $Id: location.c 1453272 2013-03-06 10:34:31Z mturk $ */
 #include "jsvc.h"
 
 /* Locations of various JVM files. We have to deal with all this madness since
@@ -84,6 +84,8 @@ char *location_jvm_cfg[] = {
 char *location_jvm_default[] = {
 #if defined(OS_DARWIN)
     "$JAVA_HOME/../Libraries/libjvm.dylib",
+    "$JAVA_HOME/jre/lib/server/libjvm.dylib",
+    "$JAVA_HOME/jre/lib/client/libjvm.dylib",
 #elif defined(OS_CYGWIN)
     "$JAVA_HOME/jre/bin/classic/jvm.dll",               /* Sun JDK 1.3 */
     "$JAVA_HOME/jre/bin/client/jvm.dll",                /* Sun JDK 1.4 */
