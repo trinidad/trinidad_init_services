@@ -259,7 +259,7 @@ module Trinidad
       def detect_prunsrv_path # only called on windows
         prunsrv_path = `for %i in (prunsrv.exe) do @echo.%~$PATH:i` rescue ''
         # a kind of `which prunsrv.exe` (if not found returns "\n")
-        prunsrv_path.chomp!
+        prunsrv_path = prunsrv_path.chomp
         prunsrv_path.empty? ? bundled_prunsrv_path : prunsrv_path
       end
       
