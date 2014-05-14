@@ -43,7 +43,9 @@ MAIN_CLASS=com.msp.jsvc.JRubyDaemon
 
 CLASSPATH=<%= @classpath.join(":") %>
 
-JRUBY_SHELL=/bin/sh
+if [ -z "$JRUBY_SHELL" ] ; then
+  JRUBY_SHELL=/bin/sh
+fi
 
 JRUBY_NATIVE_PATH=""
 if [ -d "$JRUBY_HOME/lib/native/" ]; then
@@ -59,7 +61,7 @@ fi
 # JAVA_MEM, JAVA_MEM_MIN & JAVA_STACK are compatible with jruby's binary
 
 if [ -z "$JAVA_MEM" ] ; then
-  JAVA_MEM=-Xmx500m
+  JAVA_MEM="-Xmx500m"
 fi
 # backwards compatibility we accept the non-full option (e.g. JAVA_MEM=500m)
 if [[ "$JAVA_MEM" != "-Xmx"* ]] ; then
@@ -75,7 +77,7 @@ if [ -z "$JAVA_MEM_MIN" ] ; then
 fi
 
 if [ -z "$JAVA_STACK" ] ; then
-  JAVA_STACK=-Xss2048k
+  JAVA_STACK="-Xss2048k"
 fi
 # backwards compatibility we accept the non-full option (e.g. JAVA_STACK=2048k)
 if [[ "$JAVA_STACK" != "-Xss"* ]] ; then
@@ -99,12 +101,18 @@ JAVA_PROPS="$JAVA_PROPS \
 
 PROC_NAME=${SCRIPT_NAME:-${APP_NAME:-"trinidad"}}
 
+# should multiple of 10 (min=10) :
+if [ -z "$JSVC_WAIT" ] ; then
+  JSVC_WAIT=20
+fi
+
 JSVC_ARGS="-home $JAVA_HOME \
   $JSVC_ARGS_EXTRA \
-  -wait 20 \
+  -wait $JSVC_WAIT \
   -pidfile $PIDFILE \
   -procname jsvc-$PROC_NAME \
-  -jvm server
+  -server \
+  -keepstdin \
   -outfile $LOG_FILE \
   -errfile &1"
 
