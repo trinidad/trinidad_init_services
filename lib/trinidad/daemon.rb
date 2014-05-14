@@ -7,7 +7,7 @@ end
 
 module Trinidad
   module Daemon
-    
+
     def init
     end
 
@@ -21,8 +21,13 @@ module Trinidad
     # called from com.msp.jsvc.JRubyDaemon.start
     # as Trinidad::Daemon#start
     def start(args = ARGV)
-      Trinidad::CommandLineParser.parse(args)
+      if Trinidad.const_defined?(:CLI)
+        Trinidad::CLI.parse(args)
+      else # backwards (< 1.5) compatibility :
+        Trinidad::CommandLineParser.parse(args)
+      end
       Trinidad.configuration.trap = false
+      
       @server = Trinidad::Server.new
       @server.start
     end
