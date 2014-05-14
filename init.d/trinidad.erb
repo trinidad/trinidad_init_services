@@ -101,9 +101,9 @@ JAVA_PROPS="$JAVA_PROPS \
 
 PROC_NAME=${SCRIPT_NAME:-${APP_NAME:-"trinidad"}}
 
-# should multiple of 10 (min=10) :
+# should be multiple of 10 (min=10) :
 if [ -z "$JSVC_WAIT" ] ; then
-  JSVC_WAIT=20
+  JSVC_WAIT="20"
 fi
 
 JSVC_ARGS="-home $JAVA_HOME \
@@ -112,9 +112,15 @@ JSVC_ARGS="-home $JAVA_HOME \
   -pidfile $PIDFILE \
   -procname jsvc-$PROC_NAME \
   -server \
-  -keepstdin \
   -outfile $LOG_FILE \
   -errfile &1"
+
+if [ ! -z "$JSVC_STDIN" ] ; then
+  if [[ ! "$JSVC_STDIN" == "false" ]] ; then
+    JSVC_ARGS="$JSVC_ARGS \
+      -keepstdin"
+  fi
+fi
 
 #
 # Stop/Start
