@@ -77,7 +77,7 @@ if [ -z "$JAVA_MEM_MIN" ] ; then
 fi
 
 if [ -z "$JAVA_STACK" ] ; then
-  JAVA_STACK="-Xss2048k"
+  JAVA_STACK="-Xss1536k"
 fi
 # backwards compatibility we accept the non-full option (e.g. JAVA_STACK=2048k)
 if [[ "$JAVA_STACK" != "-Xss"* ]] ; then
