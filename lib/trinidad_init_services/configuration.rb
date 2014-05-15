@@ -1,4 +1,3 @@
-require 'erb'
 require 'java'
 require 'jruby'
 require 'fileutils'
@@ -30,8 +29,13 @@ module Trinidad
       end
 
       def configure(defaults = {})
-        @app_path = defaults["app_path"] || ask_path('Application path', false)
-        @trinidad_options = ["-d #{@app_path}"]
+        if ( @app_path = defaults["app_path"] ).nil?
+          unless @base_path = defaults["base_path"]
+            @app_path = ask_path('Application (base - in case of multiple apps) path', false)
+          end
+        end
+
+        @trinidad_options = ["-d #{@app_path}"] if @app_path
         options_ask = 'Trinidad options?'
         options_default = '-e production'
         collect_windows_opts(options_ask, defaults) if windows?
@@ -68,21 +72,24 @@ module Trinidad
                  "(consider adding it to $PATH if you plan to re-run trinidad_init_service)"
           end
         end
-        @output_path = defaults["output_path"] || ask_path('init.d output path', '/etc/init.d')
-        @pid_file = defaults["pid_file"] || ask_path('pid file', '/var/run/trinidad/trinidad.pid')
-        @out_file = defaults["out_file"] || defaults["log_file"] || ask_path('out file', '/var/log/trinidad/trinidad.out')
-        @run_user = defaults["run_user"] || ask('run daemon as user (enter a non-root username or leave blank)', '')
 
-        if @run_user != '' && `id -u #{@run_user}` == ''
-          raise ArgumentError, "user '#{@run_user}' does not exist (leave blank if you're planning to `useradd' later)"
-        end
+        @pid_file = defaults["pid_file"] || ask_path('pid file', '/var/run/trinidad/trinidad.pid')
+        @out_file = defaults["out_file"] || defaults["log_file"] ||
+          ask_path('out file (where system out/err gets redirected)', '/var/log/trinidad/trinidad.out')
 
         @pid_file = File.join(@pid_file, 'trinidad.pid') if File.exist?(@pid_file) && File.directory?(@pid_file)
         make_path_dir(@pid_file, "could not create dir for '#{@pid_file}', make sure dir exists before running daemon")
         @out_file = File.join(@out_file, 'trinidad.out') if File.exist?(@out_file) && File.directory?(@out_file)
         make_path_dir(@out_file, "could not create dir for '#{@out_file}', make sure dir exists before running daemon")
 
-        daemon = ERB.new(
+        @run_user = defaults["run_user"] || ask('run daemon as user (enter a non-root username or leave blank)', '')
+        if ! @run_user.empty? && `id -u #{@run_user}` == ''
+          raise ArgumentError, "user '#{@run_user}' does not exist (leave blank if you're planning to `useradd' later)"
+        end
+
+        @output_path = defaults["output_path"] || ask_path('init.d output path', '/etc/init.d')
+
+        require('erb'); daemon = ERB.new(
           File.read(
             File.expand_path('../../init.d/trinidad.erb', File.dirname(__FILE__))
           )
@@ -91,7 +98,7 @@ module Trinidad
         say "moving trinidad to #{@output_path}"
         trinidad_file = File.join(@output_path, "trinidad")
         File.open(trinidad_file, 'w') { |file| file.write(daemon) }
-        FileUtils.chmod(@run_user == '' ? 0744 : 0755, trinidad_file)
+        FileUtils.chmod @run_user.empty? ? 0744 : 0755, trinidad_file
 
         "\nNOTE: you might want to: `[sudo] update-rc.d -f #{@output_path} defaults`"
       end

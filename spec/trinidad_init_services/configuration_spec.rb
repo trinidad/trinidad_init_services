@@ -5,7 +5,7 @@ require 'fileutils'
 require 'java'
 
 describe Trinidad::InitServices::Configuration do
-  
+
   before :each do
     Dir.mkdir(tmp_dir) unless File.exist?(tmp_dir)
     Dir.mkdir(init_dir)
@@ -18,28 +18,33 @@ describe Trinidad::InitServices::Configuration do
 
 	it "creates the init.d file" do
     subject.configure(config_defaults)
-    
+
 		File.exist?(init_file).should be_true
 
     init_file_content = File.read(init_file)
 
-    init_file_content.match(/JSVC=tmp\/jsvc/).should be_true
-    init_file_content.match(/JAVA_HOME=tmp\/java/).should be_true
-    init_file_content.match(/JRUBY_HOME=tmp\/jruby/).should be_true
-    init_file_content.match(/APP_PATH=tmp\/app/).should be_true
+    init_file_content.match(/JSVC=tmp\/jsvc\/bin\/jsvc/).should be_true
+    init_file_content.match(/JAVA_HOME="tmp\/java"/).should be_true
+    init_file_content.match(/JRUBY_HOME="tmp\/jruby"/).should be_true
+    init_file_content.match(/BASE_PATH="tmp\/app"/).should be_true
+
+    init_file_content.match(/PID_FILE="tmp\/trinidad.pid"/).should be_true
+    init_file_content.match(/OUT_FILE="tmp\/trinidad.out"/).should be_true
+
     init_file_content.match(/TRINIDAD_OPTS="-d tmp\/app -e production"/).should be_true
-    
+
     init_file_content.match(/RUN_USER=""/).should be_true
   end
-  
+
   it "makes pid_file and log_file dirs" do
     pids_dir = File.join(tmp_dir, "pids")
     logs_dir = File.join(tmp_dir, "logs")
     begin
+      config = config_defaults.dup; config.delete('out_file')
       subject.configure(
-        config_defaults.merge 'pid_file' => "tmp/pids/trinidad.pid", 'log_file' => "tmp/logs/trinidad.log"
+        config.merge 'pid_file' => "tmp/pids/trinidad.pid", 'log_file' => "tmp/logs/trinidad.out"
       )
-      
+
       File.exist?(pids_dir).should be_true
       File.directory?(pids_dir).should be_true
       Dir.entries(pids_dir).should == ['.', '..']
@@ -52,16 +57,16 @@ describe Trinidad::InitServices::Configuration do
       Dir.rmdir(logs_dir) if File.exist?(logs_dir)
     end
   end
-  
+
   if java.lang.System.getProperty('os.name') !~ /windows/i
 
     it "fails for non-existing run user" do
       username = random_username
-      lambda { 
-        subject.configure(config_defaults.merge 'run_user' => username) 
+      lambda {
+        subject.configure(config_defaults.merge 'run_user' => username)
       }.should raise_error(ArgumentError)
     end
-    
+
     it "sets valid run user" do
       username = `whoami`.chomp
       subject.configure(config_defaults.merge 'run_user' => username)
@@ -71,55 +76,55 @@ describe Trinidad::InitServices::Configuration do
     end
 
     unless (`which make` rescue '').chomp.empty?
-      
+
       before(:all) do
         FileUtils.rm_r "/tmp/jsvc-unix-src" if File.exist? "/tmp/jsvc-unix-src"
       end
-      
+
       it "configures and compiles jsvc" do
         config_options = config_defaults.merge 'jsvc_path' => nil
         config_options['jsvc_unpack_dir'] = '/tmp'
-        
+
         java_home = java.lang.System.get_property("java.home")
         java_home = java_home[0...-4] if java_home[-4..-1] == '/jre'
         config_options['java_home'] = java_home # need a JDK dir
-        
+
         subject = Trinidad::InitServices::Configuration.new
         subject.instance_eval do # a bit of stubbing/mocking :
           def detect_jsvc_path; nil; end
-          def ask_path(path, default = nil) 
+          def ask_path(path, default = nil)
             raise path unless path =~ /path to jsvc .*/; default
           end
         end
-        
+
         subject.configure(config_options)
 
         init_file_content = File.read(init_file) rescue ''
         init_file_content.should =~ /JSVC=\/tmp\/jsvc\-unix\-src\/jsvc/
       end
-      
+
     end
-    
+
   end
-  
+
 	it "resolves bundled bundled prunsrv.exe based on system arch" do
     trinidad_libs = File.expand_path('trinidad-libs', File.join(File.dirname(__FILE__), '../..'))
     subject = Trinidad::InitServices::Configuration.new
     subject.initialize_paths
-    
+
     path = subject.send :bundled_prunsrv_path, "amd64"
     path.should == File.join(trinidad_libs, 'windows/amd64/prunsrv.exe')
 
     path = subject.send :bundled_prunsrv_path, "x86_64"
     path.should == File.join(trinidad_libs, 'windows/ia64/prunsrv.exe')
-    
+
     path = subject.send :bundled_prunsrv_path, "i386"
     path.should == File.join(trinidad_libs, 'windows/prunsrv.exe')
-    
+
     path = subject.send :bundled_prunsrv_path, "x86"
     path.should == File.join(trinidad_libs, 'windows/prunsrv.exe')
   end
-  
+
   it "configures windows service" do
     subject = Trinidad::InitServices::Configuration.new
     subject.instance_eval do
@@ -155,7 +160,7 @@ describe Trinidad::InitServices::Configuration do
       "
     }x
   end
-  
+
 	it "ask_path works when non tty and default nil" do
     subject.ask = false
     stdin = mock('stdin')
@@ -173,7 +178,7 @@ describe Trinidad::InitServices::Configuration do
       subject.send(:ask_path, 'Home', false)
     } ).to raise_error RuntimeError
   end
-  
+
 	it "ask= forces trinidad to not ask on tty" do
     subject.ask = false
     outcome = subject.send :ask, 'hello?', :there
@@ -182,35 +187,35 @@ describe Trinidad::InitServices::Configuration do
     outcome = subject.send :ask, 'de-ja-vu?', nil
     outcome.should be nil
   end
-  
+
 	it "say= silences standard output" do
     def subject.puts(msg)
       raise msg
     end
     lambda { subject.send :say, 'hello' }.should raise_error
-    
+
     subject.say = false
     lambda { subject.send :say, 'hello' }.should_not raise_error
   end
-  
+
   private
-  
+
     def config_defaults
       YAML::load %Q{
 app_path: "tmp/app"
 trinidad_options: "-e production"
+java_home: "tmp/java"
 jruby_home: "tmp/jruby"
 ruby_compat_version: RUBY1_8
 trinidad_name: Trinidad
-jsvc_path: "tmp/jsvc"
-java_home: "tmp/java"
-output_path: "tmp/etc_init.d"
-pid_file: "tmp/trinidad.pid"
-log_file: "tmp/trinidad.log"
+jsvc_path: tmp/jsvc/bin/jsvc
+output_path: tmp/etc_init.d
+pid_file: tmp/trinidad.pid
+out_file: tmp/trinidad.out
 run_user: ""
 }
     end
-  
+
     def init_file
       File.join init_dir, 'trinidad'
     end
@@ -226,9 +231,9 @@ run_user: ""
     def root_dir
       File.join File.dirname(__FILE__), "/../../"
     end
-    
+
     def random_username(len = 8)
       (0...len).map{ ( 65 + rand(25) ).chr }.join.downcase
     end
-    
+
 end
