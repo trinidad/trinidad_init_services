@@ -1,0 +1,12 @@
+language: ruby
+jdk:
+  - openjdk6
+  - oraclejdk7
+  - oraclejdk8
+rvm:
+  - jruby
+before_install:
+  - ((jruby -v | grep 1.8.7) && jruby --1.9 -S gem update --system 2.1.11) || true
+env:
+  - JRUBY_OPTS="--1.8 $JRUBY_OPTS" TRINIDAD_VERSION="~> 1.4.6"
+  - JRUBY_OPTS="$JRUBY_OPTS"
