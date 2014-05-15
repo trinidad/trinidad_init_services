@@ -24,8 +24,8 @@ ECHO_COMMAND=""
 # but DO NOT delete the -d option, i.e -e production
 TRINIDAD_OPTS="<%= @trinidad_options.join(" ") %>"
 
-PIDFILE=<%= @pid_file %>
-LOG_FILE=<%= @log_file %>
+PIDFILE="<%= @pid_file %>"
+LOG_FILE="<%= @out_file %>"
 
 # Create pidfile directory if missing
 # Todo: Remove PIDFILE_DIR creation once jsvc can be started

@@ -64,24 +64,24 @@ module Trinidad
           if @jsvc.empty? # unpack and compile :
             jsvc_unpack_dir = defaults["jsvc_unpack_dir"] || ask_path("dir where jsvc dist should be unpacked", '/usr/local/src')
             @jsvc = compile_jsvc(jsvc_unpack_dir, @java_home)
-            say "jsvc binary available at: #{@jsvc} " + 
+            say "jsvc binary available at: #{@jsvc} " +
                  "(consider adding it to $PATH if you plan to re-run trinidad_init_service)"
           end
         end
         @output_path = defaults["output_path"] || ask_path('init.d output path', '/etc/init.d')
         @pid_file = defaults["pid_file"] || ask_path('pid file', '/var/run/trinidad/trinidad.pid')
-        @log_file = defaults["log_file"] || ask_path('log file', '/var/log/trinidad/trinidad.log')
+        @out_file = defaults["out_file"] || defaults["log_file"] || ask_path('out file', '/var/log/trinidad/trinidad.out')
         @run_user = defaults["run_user"] || ask('run daemon as user (enter a non-root username or leave blank)', '')
-        
+
         if @run_user != '' && `id -u #{@run_user}` == ''
           raise ArgumentError, "user '#{@run_user}' does not exist (leave blank if you're planning to `useradd' later)"
         end
-        
+
         @pid_file = File.join(@pid_file, 'trinidad.pid') if File.exist?(@pid_file) && File.directory?(@pid_file)
         make_path_dir(@pid_file, "could not create dir for '#{@pid_file}', make sure dir exists before running daemon")
-        @log_file = File.join(@log_file, 'trinidad.log') if File.exist?(@log_file) && File.directory?(@log_file)
-        make_path_dir(@log_file, "could not create dir for '#{@log_file}', make sure dir exists before running daemon")
-        
+        @out_file = File.join(@out_file, 'trinidad.out') if File.exist?(@out_file) && File.directory?(@out_file)
+        make_path_dir(@out_file, "could not create dir for '#{@out_file}', make sure dir exists before running daemon")
+
         daemon = ERB.new(
           File.read(
             File.expand_path('../../init.d/trinidad.erb', File.dirname(__FILE__))
