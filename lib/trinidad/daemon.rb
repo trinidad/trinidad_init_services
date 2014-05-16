@@ -22,13 +22,15 @@ module Trinidad
     # as Trinidad::Daemon#start
     def start(args = ARGV)
       if Trinidad.const_defined?(:CLI)
-        Trinidad::CLI.parse(args)
+        config = Trinidad::CLI.parse(args)
+        config[:trap] = false
+        @server = Trinidad::Server.new(config)
       else # backwards (< 1.5) compatibility :
         Trinidad::CommandLineParser.parse(args)
+        Trinidad.configuration.trap = false
+        @server = Trinidad::Server.new
       end
-      Trinidad.configuration.trap = false
-      
-      @server = Trinidad::Server.new
+
       @server.start
     end
 
