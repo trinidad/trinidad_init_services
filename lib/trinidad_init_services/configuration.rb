@@ -20,14 +20,6 @@ module Trinidad
         @stdin, @stdout = stdin, stdout
       end
 
-      def initialize_paths(jruby_home = default_jruby_home)
-        @trinidad_daemon_path = File.expand_path('../../trinidad/daemon.rb', __FILE__)
-        @jars_path = File.expand_path('../../../trinidad-libs', __FILE__)
-
-        @classpath = ['jruby-jsvc.jar', 'commons-daemon.jar'].map { |jar| File.join(@jars_path, jar) }
-        @classpath << File.join(jruby_home, 'lib', 'jruby.jar')
-      end
-
       def configure(defaults = {})
         if ( @app_path = defaults["app_path"] ).nil?
           unless @base_path = defaults["base_path"]
@@ -44,30 +36,42 @@ module Trinidad
         @trinidad_options.map! { |opt| Shellwords.shellsplit(opt) }.flatten!
         @jruby_home = defaults["jruby_home"] || ask_path('JRuby home', default_jruby_home)
         @ruby_compat_version = defaults["ruby_compat_version"] || default_ruby_compat_version
-        @jruby_opts = configure_jruby_opts
+        @jruby_opts = configure_jruby_opts(@jruby_home, @ruby_compat_version)
         initialize_paths(@jruby_home)
 
-        message = windows? ? configure_windows_service : configure_unix_daemon(defaults)
+        @java_home = defaults["java_home"] || # only asking on *NIX, so far :
+          ( windows? ? default_java_home : ask_path('Java home', default_java_home) )
+
+        message = windows? ?
+          configure_windows_service(defaults, @java_home) :
+            configure_unix_daemon(defaults, @java_home)
         say message if message.is_a?(String)
       end
 
-      def configure_jruby_opts
+      def configure_jruby_opts(jruby_home = @jruby_home, ruby_compat_version = @ruby_compat_version)
         opts = []
-        opts << "-Djruby.home=#{@jruby_home}"
-        opts << "-Djruby.lib=#{File.join(@jruby_home, 'lib')}"
+        opts << "-Djruby.home=#{jruby_home}"
+        opts << "-Djruby.lib=#{File.join(jruby_home, 'lib')}"
         opts << "-Djruby.script=jruby"
         opts << "-Djruby.daemon.module.name=Trinidad"
-        opts << "-Djruby.compat.version=#{@ruby_compat_version}"
+        opts << "-Djruby.compat.version=#{ruby_compat_version}"
         opts
       end
 
-      def configure_unix_daemon(defaults)
-        @java_home = defaults["java_home"] || ask_path('Java home', default_java_home)
+      def initialize_paths(jruby_home = default_jruby_home)
+        @trinidad_daemon_path = File.expand_path('../../trinidad/daemon.rb', __FILE__)
+        @jars_path = File.expand_path('../../../trinidad-libs', __FILE__)
+
+        @classpath = ['jruby-jsvc.jar', 'commons-daemon.jar'].map { |jar| File.join(@jars_path, jar) }
+        @classpath << File.join(jruby_home, 'lib', 'jruby.jar')
+      end
+
+      def configure_unix_daemon(defaults, java_home = default_java_home)
         unless @jsvc = defaults["jsvc_path"] || detect_jsvc_path
           @jsvc = ask_path("path to jsvc binary (leave blank and we'll try to compile)", '')
           if @jsvc.empty? # unpack and compile :
             jsvc_unpack_dir = defaults["jsvc_unpack_dir"] || ask_path("dir where jsvc dist should be unpacked", '/usr/local/src')
-            @jsvc = compile_jsvc(jsvc_unpack_dir, @java_home)
+            @jsvc = compile_jsvc(jsvc_unpack_dir, java_home)
             say "jsvc binary available at: #{@jsvc} " +
                  "(consider adding it to $PATH if you plan to re-run trinidad_init_service)"
           end
@@ -118,7 +122,7 @@ module Trinidad
         @trinidad_service_desc = defaults["trinidad_service_desc"] || ask(desc_ask, desc_default)
       end
 
-      def configure_windows_service
+      def configure_windows_service(defaults, java_home = default_java_home)
         srv_path = detect_prunsrv_path
 
         command = %Q{//IS//#{@trinidad_service_id} --DisplayName="#{@trinidad_name}" \
@@ -180,7 +184,8 @@ module Trinidad
       end
 
       def default_ruby_compat_version
-        JRuby.runtime.is1_9 ? "RUBY1_9" : "RUBY1_8"
+        # NOTE: deprecated on 9k but still working (returns RUBY2_1)
+        JRuby.runtime.getInstanceConfig.getCompatVersion.to_s
       end
 
       def windows?
