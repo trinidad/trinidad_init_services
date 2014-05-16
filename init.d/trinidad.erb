@@ -20,9 +20,12 @@ RUN_USER="<%= @run_user %>"
 # Set this to "1" to echo commands before running them (for troubleshooting) :
 ECHO_COMMAND=""
 
-# Add here the options that Trinidad needs to run your application,
-# but DO NOT delete the -d option, i.e -e production
-TRINIDAD_OPTS="<%= @trinidad_options.join(" ") %>"
+# options that Trinidad needs to run your application, e.g. "-e production"
+TRINIDAD_OPTS="<%= @trinidad_options.join(' ') %>"
+
+# a custom (daemon) script will be started (not jruby -S) thus JRUBY_OPTS
+# won't be picked up, however one can hand tune JAVA_OPTS here instead ...
+JAVA_OPTS=""
 
 PID_FILE="<%= @pid_file %>"
 OUT_FILE="<%= @out_file %>"
@@ -65,39 +68,50 @@ if [ -d "$JRUBY_HOME/lib/native/" ]; then
   done
 fi
 
-# JAVA_MEM, JAVA_MEM_MIN & JAVA_STACK are compatible with jruby's binary
+# JAVA_MEM, JAVA_MEM_MIN & JAVA_STACK compatible with JRuby's binary :
 
 if [ -z "$JAVA_MEM" ] ; then
   JAVA_MEM="-Xmx500m"
 fi
 # backwards compatibility we accept the non-full option (e.g. JAVA_MEM=500m)
-if [[ "$JAVA_MEM" != "-Xmx"* ]] ; then
+if [ "${JAVA_MEM:0:4}" != "-Xmx" ] ; then
   JAVA_MEM="-Xmx$JAVA_MEM"
 fi
 
 # we accept the non-full option (e.g. JAVA_MEM_MIN=500m)
-if [[ -n "$JAVA_MEM_MIN" && "$JAVA_MEM_MIN" != "-Xms"* ]] ; then
-  JAVA_MEM_MIN="-Xms$JAVA_MEM_MIN"
-fi
-if [ -z "$JAVA_MEM_MIN" ] ; then
-  JAVA_MEM_MIN=""
+if [ -n "$JAVA_MEM_MIN" ] ; then
+  if [ "${JAVA_MEM_MIN:0:4}" != "-Xms" ] ; then
+    JAVA_MEM_MIN="-Xms$JAVA_MEM_MIN"
+  fi
+else
+  if [ -z "$JAVA_MEM_MIN" ] ; then
+    JAVA_MEM_MIN=""
+  fi
 fi
 
 if [ -z "$JAVA_STACK" ] ; then
   JAVA_STACK="-Xss1536k"
 fi
 # backwards compatibility we accept the non-full option (e.g. JAVA_STACK=2048k)
-if [[ "$JAVA_STACK" != "-Xss"* ]] ; then
+if [ "${JAVA_STACK:0:4}" != "-Xss" ] ; then
   JAVA_STACK="-Xss$JAVA_STACK"
 fi
 
-# A custom (daemon) script will be started (not jruby -S) thus JRUBY_OPTS
-# won't be used here, feel free to hand tune JAVA_OPTS here instead ...
+if [ -z "$JAVA_OPTS" ] ; then
+  JAVA_OPTS="$JAVA_MEM $JAVA_MEM_MIN $JAVA_STACK"
+else
+  if ! echo "$JAVA_OPTS" | grep "\-Xmx" ; then
+    JAVA_OPTS="$JAVA_OPTS $JAVA_MEM $JAVA_MEM_MIN"
+  fi
+  if ! echo "$JAVA_OPTS" | grep "\-Xss" ; then
+    JAVA_OPTS="$JAVA_OPTS $JAVA_STACK"
+  fi
+fi
 
-JAVA_OPTS="$JAVA_MEM $JAVA_MEM_MIN $JAVA_STACK -Xbootclasspath/a:$JRUBY_HOME/lib/jruby.jar"
+JAVA_OPTS="$JAVA_OPTS -Xbootclasspath/a:$JRUBY_HOME/lib/jruby.jar"
 
-# force file.encoding to UTF-8 :
-if [[ -z "$JAVA_ENCODING" ]]; then
+# force file.encoding to UTF-8 (if JAVA_ENCODING specified) :
+if [ -z "$JAVA_ENCODING" ]; then
   JAVA_OPTS="$JAVA_OPTS -Dfile.encoding=UTF-8"
 fi
 
@@ -124,7 +138,7 @@ if [ -z "$JSVC_CWD" ] ; then
   JSVC_CWD="$BASE_PATH"
 fi
 # NOTE: jsvc -cwd does not handle quoted (' or ") paths
-if [[ ! "$JSVC_CWD" == "false" ]] ; then
+if [ "$JSVC_CWD" != "false" ] ; then
   JSVC_ARGS="$JSVC_ARGS -cwd $JSVC_CWD"
 else
   if [ ! -z "$BASE_PATH" ] ; then
@@ -133,7 +147,7 @@ else
 fi
 
 if [ ! -z "$JSVC_STDIN" ] ; then
-  if [[ ! "$JSVC_STDIN" == "false" ]] ; then
+  if [ "$JSVC_STDIN" != "false" ] ; then
     JSVC_ARGS="$JSVC_ARGS -keepstdin"
   fi
 fi
@@ -144,8 +158,10 @@ JSVC_ARGS="$JSVC_ARGS -outfile $OUT_FILE -errfile &1"
 # Stop/Start
 #
 
-if [[ -n "$RUN_USER" && $EUID -eq 0 ]]; then
-  JSVC="sudo -u $RUN_USER $JSVC"
+if [ -n "$RUN_USER" ]; then
+  if [ $EUID -eq 0 ]; then
+    JSVC="sudo -u $RUN_USER $JSVC"
+  fi
 fi
 
 STOP_COMMAND="$JSVC $JSVC_ARGS -stop $MAIN_CLASS"
