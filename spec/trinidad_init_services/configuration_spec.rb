@@ -49,7 +49,7 @@ describe Trinidad::InitServices::Configuration do
 
     init_file_content = File.read(init_file)
 
-    java_opts = init_file_content.match(/JAVA_OPTS=(.*)$/)
+    java_opts = init_file_content.match(/JAVA_OPTS="(.*?)"/m)
     expect( java_opts ).to_not be nil
     expect( java_opts = java_opts[1] ).to_not be nil
     expect( java_opts ).to include '-XX:+UseCodeCacheFlushing'
@@ -72,7 +72,7 @@ describe Trinidad::InitServices::Configuration do
 
     init_file_content = File.read(init_file)
 
-    java_opts = init_file_content.match(/JAVA_OPTS=(.*)$/)
+    java_opts = init_file_content.match(/JAVA_OPTS="(.*?)"/m)
     expect( java_opts ).to_not be nil
     expect( java_opts = java_opts[1] ).to_not be nil
     expect( java_opts ).to include '-XX:+UseCodeCacheFlushing'
@@ -90,7 +90,7 @@ describe Trinidad::InitServices::Configuration do
 
     init_file_content = File.read(init_file)
 
-    java_opts = init_file_content.match(/JAVA_OPTS=(.*)$/)[1]
+    java_opts = init_file_content.match(/JAVA_OPTS="(.*?)"/m)[1]
     expect( java_opts ).to_not be nil
     expect( code_cache_size = java_opts.match(/-XX:ReservedCodeCacheSize=(.*)m/)[1] ).to_not be nil
     if java_version =~ /^1\.(6|7)/
