@@ -7,6 +7,7 @@ require 'java'
 describe Trinidad::InitServices::Configuration do
 
   before :each do
+    ENV['JAVA_HOME'] = nil # make sure it does not interfere
     Dir.mkdir(tmp_dir) unless File.exist?(tmp_dir)
     Dir.mkdir(init_dir)
   end
@@ -14,10 +15,13 @@ describe Trinidad::InitServices::Configuration do
   after :each do
     FileUtils.rm_r init_dir
     Dir.rmdir(tmp_dir) if Dir.entries(tmp_dir) == [ '.', '..' ]
+    ENV_JAVA.update @@env_java
   end
 
+  before(:all) { @@env_java = ENV_JAVA.dup }
+
 	it "creates the init.d file" do
-    subject.configure(config_defaults)
+    subject.configure config_defaults.merge 'java_home' => 'tmp/java', 'jruby_home' => 'tmp/jruby'
 
 		File.exist?(init_file).should be_true
 
@@ -31,9 +35,85 @@ describe Trinidad::InitServices::Configuration do
     init_file_content.match(/PID_FILE="tmp\/trinidad.pid"/).should be_true
     init_file_content.match(/OUT_FILE="tmp\/trinidad.out"/).should be_true
 
-    init_file_content.match(/TRINIDAD_OPTS="-d tmp\/app -e production"/).should be_true
+    init_file_content.match(/TRINIDAD_OPTS="--dir tmp\/app -e production"/).should be_true
 
     init_file_content.match(/RUN_USER=""/).should be_true
+  end
+
+	it "configures memory requirements using JAVA_OPTS (Java 6)" do
+    ENV_JAVA['java.version'] = '1.6.0_43'
+    ENV_JAVA['os.arch'] = 'x64'
+
+    defaults = config_defaults.merge 'configure_memory' => true, 'hot_deployment' => true
+    subject.configure(defaults)
+
+    init_file_content = File.read(init_file)
+
+    java_opts = init_file_content.match(/JAVA_OPTS=(.*)$/)
+    expect( java_opts ).to_not be nil
+    expect( java_opts = java_opts[1] ).to_not be nil
+    expect( java_opts ).to include '-XX:+UseCodeCacheFlushing'
+    expect( java_opts ).to include '-XX:ReservedCodeCacheSize='
+    expect( java_opts ).to include '-XX:MaxPermSize='
+    expect( java_opts ).to_not include '-XX:MaxMetaspaceSize='
+    expect( java_opts ).to include '-Xmx'
+
+    expect( java_opts ).to include '-XX:+UseConcMarkSweepGC'
+    expect( java_opts ).to include '-XX:+UseConcMarkSweepGC'
+    expect( java_opts ).to include '-XX:+UseCompressedOops'
+  end
+
+	it "configures memory requirements using JAVA_OPTS (Java 8)" do
+    ENV_JAVA['java.version'] = '1.8.0_05'
+    ENV_JAVA['os.arch'] = 'x64'
+
+    defaults = config_defaults.merge 'configure_memory' => true
+    subject.configure(defaults)
+
+    init_file_content = File.read(init_file)
+
+    java_opts = init_file_content.match(/JAVA_OPTS=(.*)$/)
+    expect( java_opts ).to_not be nil
+    expect( java_opts = java_opts[1] ).to_not be nil
+    expect( java_opts ).to include '-XX:+UseCodeCacheFlushing'
+    expect( java_opts ).to include '-XX:ReservedCodeCacheSize='
+    expect( java_opts ).to include '-XX:MaxMetaspaceSize='
+    expect( java_opts ).to include '-Xmx'
+
+    expect( java_opts ).to_not include '-XX:+UseConcMarkSweepGC'
+    expect( java_opts ).to_not include '-XX:+UseCompressedOops'
+  end
+
+	it "calculates memory requirements using JAVA_OPTS" do
+    defaults = config_defaults.merge 'configure_memory' => true
+    subject.configure(defaults)
+
+    init_file_content = File.read(init_file)
+
+    java_opts = init_file_content.match(/JAVA_OPTS=(.*)$/)[1]
+    expect( java_opts ).to_not be nil
+    expect( code_cache_size = java_opts.match(/-XX:ReservedCodeCacheSize=(.*)m/)[1] ).to_not be nil
+    if java_version =~ /^1\.(6|7)/
+      expect( max_perm_size = java_opts.match(/-XX:MaxPermSize=(.*)m/)[1] ).to_not be nil
+    else
+      expect( max_perm_size = java_opts.match(/-XX:MaxMetaspaceSize=(.*)m/)[1] ).to_not be nil
+    end
+    expect( max_heap_size = java_opts.match(/-Xmx(.*)m/)[1] ).to_not be nil
+
+    total = code_cache_size.to_i + max_perm_size.to_i + max_heap_size.to_i
+
+    expect( 720 - total ).to be >= 0
+    expect( 720 - total ).to be <= 10
+  end
+
+	it "configures -Xmx for custom JAVA_HOME" do
+    defaults = config_defaults.merge 'configure_memory' => true, 'java_home' => '/opt/ibm/jre-5'
+    subject.configure(defaults)
+
+    init_file_content = File.read(init_file)
+
+    expect( init_file_content.match(/JAVA_OPTS=(.*)$/) ).to_not be nil
+    expect( init_file_content.match(/JAVA_OPTS=(.*)$/) ).to_not eql '-Xmx670m'
   end
 
   it "makes pid_file and log_file dirs" do
@@ -41,9 +121,8 @@ describe Trinidad::InitServices::Configuration do
     logs_dir = File.join(tmp_dir, "logs")
     begin
       config = config_defaults.dup; config.delete('out_file')
-      subject.configure(
-        config.merge 'pid_file' => "tmp/pids/trinidad.pid", 'log_file' => "tmp/logs/trinidad.out"
-      )
+      config.merge! 'pid_file' => "tmp/pids/trinidad.pid", 'log_file' => "tmp/logs/trinidad.out"
+      subject.configure(config)
 
       File.exist?(pids_dir).should be_true
       File.directory?(pids_dir).should be_true
@@ -82,7 +161,8 @@ describe Trinidad::InitServices::Configuration do
       end
 
       it "configures and compiles jsvc" do
-        config_options = config_defaults.merge 'jsvc_path' => nil
+        config_options = config_defaults.merge 'jruby_home' => '/opt/jruby'
+        config_options['jsvc_path'] = nil
         config_options['jsvc_unpack_dir'] = '/tmp'
 
         java_home = java.lang.System.get_property("java.home")
@@ -101,7 +181,7 @@ describe Trinidad::InitServices::Configuration do
 
         init_file_content = File.read(init_file) rescue ''
         init_file_content.should =~ /JSVC=\/tmp\/jsvc\-unix\-src\/jsvc/
-      end
+      end unless ENV['SKIP_JSVC'] == 'true'
 
     end
 
@@ -148,7 +228,7 @@ describe Trinidad::InitServices::Configuration do
     subject.system_command.should =~ /\/\/IS\/\/TrinidadService/
     subject.system_command.should =~ /--DisplayName="Trinidad"/
     subject.system_command.should =~ /--Description="Trinidad Service Description"/
-    subject.system_command.should =~ /--StartParams=".*?\\daemon.rb;-d;C:\\MyApp;-e;production;-p;4242"/
+    subject.system_command.should =~ /--StartParams=".*?\\daemon.rb;--dir;C:\\MyApp;-e;production;-p;4242"/
     subject.system_command.should =~ /--Classpath=\".*?\\jruby-jsvc.jar;.*?\\commons-daemon.jar;.*?\\jruby.jar/
     subject.system_command.should =~ %r{
       \+\+JvmOptions="
@@ -200,40 +280,36 @@ describe Trinidad::InitServices::Configuration do
 
   private
 
-    def config_defaults
-      YAML::load %Q{
-app_path: "tmp/app"
-trinidad_options: "-e production"
-java_home: "tmp/java"
-jruby_home: "tmp/jruby"
-ruby_compat_version: RUBY1_8
-trinidad_name: Trinidad
-jsvc_path: tmp/jsvc/bin/jsvc
-output_path: tmp/etc_init.d
-pid_file: tmp/trinidad.pid
-out_file: tmp/trinidad.out
-run_user: ""
-}
-    end
+  def config_defaults
+    YAML::load File.read(config_file_path)
+  end
 
-    def init_file
-      File.join init_dir, 'trinidad'
-    end
+  def config_file_path
+    File.expand_path('init_service_config.yml', File.dirname(__FILE__))
+  end
 
-    def init_dir
-      File.join tmp_dir, 'etc_init.d'
-    end
+  def init_file
+    File.join init_dir, 'trinidad'
+  end
 
-    def tmp_dir
-      File.join root_dir, 'tmp'
-    end
+  def init_dir
+    File.join tmp_dir, 'etc_init.d'
+  end
 
-    def root_dir
-      File.join File.dirname(__FILE__), "/../../"
-    end
+  def tmp_dir
+    File.join root_dir, 'tmp'
+  end
 
-    def random_username(len = 8)
-      (0...len).map{ ( 65 + rand(25) ).chr }.join.downcase
-    end
+  def root_dir
+    File.join File.dirname(__FILE__), "/../../"
+  end
+
+  def random_username(len = 8)
+    (0...len).map{ ( 65 + rand(25) ).chr }.join.downcase
+  end
+
+  def java_version
+    Java::JavaLang::System.getProperty("java.version")
+  end
 
 end

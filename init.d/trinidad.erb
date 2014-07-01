@@ -21,11 +21,11 @@ RUN_USER="<%= @run_user %>"
 ECHO_COMMAND=""
 
 # options that Trinidad needs to run your application, e.g. "-e production"
-TRINIDAD_OPTS="<%= @trinidad_options.join(' ') %>"
+TRINIDAD_OPTS="<%= @trinidad_opts.is_a?(String) ?  @trinidad_opts : @trinidad_opts.join(' ') %>"
 
 # a custom (daemon) script will be started (not jruby -S) thus JRUBY_OPTS
 # won't be picked up, however one can hand tune JAVA_OPTS here instead ...
-JAVA_OPTS=""
+JAVA_OPTS="<%= @java_opts.is_a?(String) ? @java_opts : @java_opts.join(' ') %>"
 
 PID_FILE="<%= @pid_file %>"
 OUT_FILE="<%= @out_file %>"

@@ -27,13 +27,28 @@ module Trinidad
           end
         end
 
-        @trinidad_options = ["-d #{@app_path}"] if @app_path
         options_ask = 'Trinidad options?'
-        options_default = '-e production'
         collect_windows_opts(options_ask, defaults) if windows?
 
-        @trinidad_options << (defaults["trinidad_options"] || ask(options_ask, options_default))
-        @trinidad_options.map! { |opt| Shellwords.shellsplit(opt) }.flatten!
+        @trinidad_opts = defaults["trinidad_options"] || defaults["trinidad_opts"]
+
+        if @trinidad_opts.is_a?(String) # leave 'em as are
+          if @app_path && ! @trinidad_opts.index('-d') && ! @trinidad_opts.index('--dir')
+            @trinidad_opts = "--dir #{@app_path} #{@trinidad_opts}"
+          end
+        elsif @trinidad_opts
+          if @app_path && ! @trinidad_opts.find { |opt| opt.index('-d') || opt.index('--dir') }
+            @trinidad_opts.unshift("--dir #{@app_path}")
+          end
+        else
+          @trinidad_opts = [ ask(options_ask, '-e production') ]
+        end
+
+        if @trinidad_opts.is_a?(Array)
+          @trinidad_opts.map! { |opt| Shellwords.shellsplit(opt) }
+          @trinidad_opts.flatten! # split: 'opt' -> [ 'opt' ]
+        end
+
         @jruby_home = defaults["jruby_home"] || ask_path('JRuby home', default_jruby_home)
         @ruby_compat_version = defaults["ruby_compat_version"] || default_ruby_compat_version
         @jruby_opts = configure_jruby_opts(@jruby_home, @ruby_compat_version)
@@ -42,10 +57,109 @@ module Trinidad
         @java_home = defaults["java_home"] || # only asking on *NIX, so far :
           ( windows? ? default_java_home : ask_path('Java home', default_java_home) )
 
+        @java_opts = defaults["java_opts"] || []
+        @java_opts = @java_opts.strip if @java_opts.is_a?(String)
+
+        # can be disabled with *configure_memory: false*
+        configure_memory_requirements(defaults, @java_home)
+
         message = windows? ?
           configure_windows_service(defaults, @java_home) :
             configure_unix_daemon(defaults, @java_home)
         say message if message.is_a?(String)
+      end
+
+      MEMORY_DEFAULT = 720
+
+      def configure_memory_requirements(defaults, java_home)
+        return if defaults.key?("configure_memory") && ! defaults["configure_memory"]
+
+        # java_opts = defaults["configure_memory"]
+        if defaults["configure_memory"] || ask('Configure JVM memory (JAVA_OPTS)? y/n', 'n') == 'y'
+
+          total_memory = defaults["total_memory"] ||
+            ask('Total (max) memory dedicated to Trinidad? (in MB)', MEMORY_DEFAULT)
+          total_memory = total_memory.to_i
+          if total_memory <= 0
+            warn "changing total_memory to '#{MEMORY_DEFAULT}' default (provided value <= 0)"
+            total_memory = MEMORY_DEFAULT
+          end
+          if total_memory <= 160
+            warn "provided total_memory '#{total_memory}' seems low (server migh not start)"
+          end
+
+          if current_java_home?(java_home) && current_java_vendor_sun_or_oracle?
+            # 720 total memory: (Max) 144M PermGen, 72M CodeCache, 504M Heap
+
+            add_java_opt('-XX:+UseCodeCacheFlushing')
+            cache_size = total_memory >= 800 ? 80 : ( total_memory / 10 )
+            cache_size = 100 if total_memory >= 2000
+            cache_size = 120 if total_memory >= 3000
+            cache_size = 140 if total_memory >= 4000
+            add_java_opt('-XX:ReservedCodeCacheSize=', "#{cache_size}m")
+
+            heap_size = total_memory - cache_size
+
+            if ! defaults.key?("hot_deployment") || ! defaults["hot_deployment"]
+              hot_deploy = ask('Support hot (re-)deployment? y/n', 'n') == 'y'
+            else
+              hot_deploy = true
+            end
+
+            if hot_deploy && current_java_version_6?
+              # on Java 7 G1 sweeps PermGen on full GC
+              add_java_opt('-XX:+UseConcMarkSweepGC') if hot_deploy
+              add_java_opt('-XX:+CMSClassUnloadingEnabled') if hot_deploy
+            end
+
+            if current_java_version_at_least_8?
+              # NOTE: probably a good idea to limit meta-space size :
+              meta_size = heap_size / 5 # 20% (unlimited by default)
+              meta_size = min(heap_size / 4, meta_size + 100) if hot_deploy
+
+              meta = ask('Confirm meta-space size limit: (-XX:MaxMetaspaceSize in MB)', meta_size)
+              meta_size = parse_memory_setting(meta, meta_size)
+
+              add_java_opt('-XX:MaxMetaspaceSize=', "#{meta_size}m") if meta_size
+              heap_size -= meta_size.to_i
+            else
+              perm_size = heap_size / 5 # 20%
+              perm_size = min(heap_size / 4, perm_size + 100) if hot_deploy
+
+              perm = ask('Confirm perm-gen size limit: (-XX:MaxPermSize in MB)', perm_size)
+              perm_size = parse_memory_setting(perm, perm_size)
+
+              add_java_opt('-XX:MaxPermSize=', "#{perm_size}m") if perm_size
+              heap_size -= perm_size.to_i
+            end
+
+            heap_size = ( heap_size / 10 ) * 10
+            add_java_opt('-Xmx', "#{heap_size}m")
+            min_heap_size = min(heap_size / 2, 500)
+            add_java_opt('-Xms', "#{min_heap_size}m")
+
+          else # only try to limit heap (vendors such as IBM support it) :
+
+            heap_size = total_memory - ( total_memory / 15 ) # just a guess
+
+            heap_size = ( heap_size / 10 ) * 10
+            add_java_opt('-Xmx', "#{heap_size}m")
+
+          end
+
+          add_java_opt('-XX:+UseCompressedOops') if current_java_version_6? && os_arch =~ /64/
+
+        end
+      end
+
+      def add_java_opt(java_opt, opt_suffix = nil)
+        if @java_opts.is_a?(String)
+          return false if @java_opts.index(java_opt)
+          @java_opts << ( windows? ? ';' : ' ' ) unless @java_opts.strip.empty?
+        else
+          return false if @java_opts.find { |opt| opt.index(java_opt) }
+        end
+        @java_opts << "#{java_opt}#{opt_suffix}"
       end
 
       def configure_jruby_opts(jruby_home = @jruby_home, ruby_compat_version = @ruby_compat_version)
@@ -96,7 +210,7 @@ module Trinidad
         require('erb'); daemon = ERB.new(
           File.read(
             File.expand_path('../../init.d/trinidad.erb', File.dirname(__FILE__))
-          )
+          ), nil, '-' # safe_level=nil, trim_mode=nil
         ).result(binding)
 
         say "moving trinidad to #{@output_path}"
@@ -104,7 +218,7 @@ module Trinidad
         File.open(trinidad_file, 'w') { |file| file.write(daemon) }
         FileUtils.chmod @run_user.empty? ? 0744 : 0755, trinidad_file
 
-        "\nNOTE: you might want to: `[sudo] update-rc.d -f #{@output_path} defaults`"
+        "\nNOTE: you might want to: `[sudo] update-rc.d -f #{@output_path} defaults`" if @output_path.start_with?('/etc')
       end
 
       def collect_windows_opts(options_ask, defaults)
@@ -125,15 +239,23 @@ module Trinidad
       def configure_windows_service(defaults, java_home = default_java_home)
         srv_path = detect_prunsrv_path
 
+        classpath = escape_windows_options(@classpath)
+        trinidad_options = escape_windows_options(@trinidad_opts, :split)
+
+        jvm_options = escape_windows_options(@jruby_opts)
+        unless @java_opts.empty?
+          jvm_options << ';' << escape_windows_options(@java_opts)
+        end
+
         command = %Q{//IS//#{@trinidad_service_id} --DisplayName="#{@trinidad_name}" \
 --Description="#{@trinidad_service_desc}" \
 --Install=#{srv_path} --Jvm=auto --StartMode=jvm --StopMode=jvm \
 --StartClass=com.msp.procrun.JRubyService --StartMethod=start \
---StartParams="#{escape_path(@trinidad_daemon_path)};#{format_options(@trinidad_options)}" \
---StopClass=com.msp.procrun.JRubyService --StopMethod=stop --Classpath="#{format_options(@classpath)}" \
+--StartParams="#{escape_windows_path(@trinidad_daemon_path)};#{trinidad_options}" \
+--StopClass=com.msp.procrun.JRubyService --StopMethod=stop --Classpath="#{classpath}" \
 --StdOutput=auto --StdError=auto \
 --LogPrefix="#{@trinidad_service_id.downcase}" \
-++JvmOptions="#{format_options(@jruby_opts)}"
+++JvmOptions="#{jvm_options}"
 }
         system "#{srv_path} #{command}"
 
@@ -167,23 +289,83 @@ module Trinidad
 
       private
 
-      def escape_path(path)
+      def escape_windows_path(path)
         path.gsub(%r{/}, '\\')
       end
 
-      def format_options(options)
-        options.map { |opt| escape_path(opt) }.join(';')
+      def escape_windows_options(options, split = nil)
+        if options.is_a?(String)
+          return escape_windows_path(options) unless split
+          options = options.split(' ')
+        end
+        options.map { |opt| escape_windows_path(opt) }.join(';')
       end
 
-      def default_jruby_home
+      def min(num1, num2); num1 <= num2 ? num1 : num2 end
+
+      def empty?(arg)
+        return true unless arg
+        ! arg.respond_to?(:empty) || arg.empty?
+      end
+
+      def parse_memory_setting(memory, default = nil)
+        return default if empty?(memory)
+        return false if memory == 'n'
+        return default if memory == 'y'
+        memory = memory[0...-1] if memory.is_a?(String) && memory =~ /m$/i
+        memory
+      end
+
+      def default_jruby_home; current_jruby_home end
+
+      def current_jruby_home
         Java::JavaLang::System.get_property("jruby.home")
       end
 
       def default_java_home
-        ENV['JAVA_HOME'] || Java::JavaLang::System.get_property("java.home")
+        ENV['JAVA_HOME'] || current_java_home
       end
 
-      def default_ruby_compat_version
+      def current_java_home
+        ENV_JAVA['java.home']
+      end
+
+      def current_java_home?(java_home)
+        java_home == current_java_home
+      end
+
+      def current_java_vendor_sun_or_oracle?
+        ENV_JAVA['java.vendor'] =~ /^(Oracle|Sun)/
+      end
+
+      def current_java_version(split = nil)
+        version = ENV_JAVA['java.version']
+        return version unless split
+        @current_java_version ||= begin
+          # e.g. "1.7.0_51" -> [ 1, 7, 0 ]
+          # but  "1.8.0"    -> [ 1, 8, 0 ]
+          if i = version.index('_')
+            version = version[0, i]
+          end
+          version.split('.').map(&:to_i)
+        end
+      end
+
+      def current_java_version_6?
+        current_java_version(true)[1] == 6
+      end
+
+      def current_java_version_7?
+        current_java_version(true)[1] == 7
+      end
+
+      def current_java_version_at_least_8?
+        current_java_version(true)[1] >= 8
+      end
+
+      def default_ruby_compat_version; current_ruby_compat_version end
+
+      def current_ruby_compat_version
         # NOTE: deprecated on 9k but still working (returns RUBY2_1)
         JRuby.runtime.getInstanceConfig.getCompatVersion.to_s
       end
@@ -275,7 +457,7 @@ module Trinidad
         prunsrv_path.empty? ? bundled_prunsrv_path : prunsrv_path
       end
 
-      def bundled_prunsrv_path(arch = java.lang.System.getProperty("os.arch"))
+      def bundled_prunsrv_path(arch = os_arch)
         # "amd64", "i386", "x86", "x86_64"
         path = 'windows'
         if arch =~ /amd64/i # amd64
@@ -285,6 +467,10 @@ module Trinidad
         # else "i386", "x86"
         end
         File.join(@jars_path, path, 'prunsrv.exe')
+      end
+
+      def os_arch
+        ENV_JAVA['os.arch']
       end
 
       def make_path_dir(path, error = nil)
@@ -310,8 +496,9 @@ module Trinidad
       def ask(question, default = nil)
         return default if ! @stdin.tty? || @ask == false
 
-        question = "#{question}?" unless question.index('?')
-        question += " [#{default}]" if default && ! default.empty?
+        question = "#{question}?" if ! question.index('?') || ! question.index(':')
+        question += " [#{default}]" if default &&
+          ( ! default.is_a?(String) || ! default.empty? )
 
         result = nil
         while result.nil?

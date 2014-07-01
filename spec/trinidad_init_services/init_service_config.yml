@@ -1,0 +1,11 @@
+app_path: "tmp/app"
+trinidad_options: "-e production"
+#java_home: "tmp/java"
+#jruby_home: "tmp/jruby"
+ruby_compat_version: RUBY1_8
+trinidad_name: Trinidad
+jsvc_path: tmp/jsvc/bin/jsvc
+output_path: tmp/etc_init.d
+pid_file: tmp/trinidad.pid
+out_file: tmp/trinidad.out
+run_user: ""
