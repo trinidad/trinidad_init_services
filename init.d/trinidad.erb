@@ -25,7 +25,11 @@ TRINIDAD_OPTS="<%= @trinidad_opts.is_a?(String) ?  @trinidad_opts : @trinidad_op
 
 # a custom (daemon) script will be started (not jruby -S) thus JRUBY_OPTS
 # won't be picked up, however one can hand tune JAVA_OPTS here instead ...
-JAVA_OPTS="<%= @java_opts.is_a?(String) ? @java_opts : @java_opts.join(' ') %>"
+<% if ( java_opts = @java_opts.is_a?(String) ? @java_opts : @java_opts.join(' ') ).empty? -%>
+JAVA_OPTS="$JAVA_OPTS"
+<% else -%>
+JAVA_OPTS="<%= java_opts %>"
+<% end -%>
 
 PID_FILE="<%= @pid_file %>"
 OUT_FILE="<%= @out_file %>"
