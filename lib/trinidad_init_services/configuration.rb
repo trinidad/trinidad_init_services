@@ -20,6 +20,8 @@ module Trinidad
         @stdin, @stdout = stdin, stdout
       end
 
+      SERVICE_DESC = 'JRuby on Rails/Rack server'
+
       def configure(defaults = {})
         if ( @app_path = defaults["app_path"] ).nil?
           unless @base_path = defaults["base_path"]
@@ -30,7 +32,23 @@ module Trinidad
         end
 
         options_ask = 'Trinidad options?'
-        collect_windows_opts(options_ask, defaults) if windows?
+
+        @service_id = defaults['service_id'] || defaults['trinidad_service_id']
+        @service_name = defaults['service_name'] || defaults['trinidad_name']
+        @service_desc = defaults['service_desc'] || defaults['trinidad_service_desc']
+
+        if windows?
+          options_ask << ' (separated by `;`)'
+
+          @service_id ||= ask('Service ID? {alphanumeric and underscores only}', 'Trinidad')
+          name_default = @service_id.gsub('_', ' ')
+          @service_name ||= ask('Service (display) name? {alphanumeric and spaces only}', name_default)
+          @service_desc ||= ask('Service description? {alphanumeric and spaces only}', SERVICE_DESC)
+        else
+          @service_id ||= 'Trinidad'
+          @service_name ||= @service_id
+          @service_desc ||= SERVICE_DESC
+        end
 
         @trinidad_opts = defaults["trinidad_options"] || defaults["trinidad_opts"]
 
@@ -220,24 +238,9 @@ module Trinidad
         File.open(trinidad_file, 'w') { |file| file.write(daemon) }
         FileUtils.chmod @run_user.empty? ? 0744 : 0755, trinidad_file
 
-        if @output_path.start_with?('/etc')
+        if @output_path.start_with?('/etc') # TODO
           "\nNOTE: you might want to: `[sudo] update-rc.d -f #{@output_path} defaults`"
         end
-      end
-
-      def collect_windows_opts(options_ask, defaults)
-        options_ask << '(separated by `;`)'
-        name_ask = 'Service name? {Alphanumeric and spaces only}'
-        name_default = 'Trinidad'
-        @trinidad_name = defaults["trinidad_name"] || ask(name_ask, name_default)
-
-        id_ask = 'Service ID? {Alphanumeric and underscores only}'
-        id_default = @trinidad_name.gsub(/\s+/, '_').gsub(/\W/, '')
-        @trinidad_service_id = defaults["trinidad_service_id"] || ask(id_ask, id_default)
-
-        desc_ask = 'Service description? {Alphanumeric and spaces only}'
-        desc_default = 'Embedded Apache Tomcat running Rack and Rails applications'
-        @trinidad_service_desc = defaults["trinidad_service_desc"] || ask(desc_ask, desc_default)
       end
 
       def configure_windows_service(defaults, java_home = default_java_home)
@@ -253,8 +256,8 @@ module Trinidad
 
         stop_timeout = defaults["stop_timeout"] || 5
 
-        command = %Q{//IS//#{@trinidad_service_id} --DisplayName="#{@trinidad_name}" \
---Description="#{@trinidad_service_desc}" \
+        command = %Q{//IS//#{@service_id} --DisplayName="#{@service_name}" \
+--Description="#{@service_desc}" \
 --Install=#{srv_path} --Jvm=auto \
 --StartMode=jvm --StopMode=jvm \
 --StartClass=com.msp.procrun.JRubyService --StartMethod=start \
@@ -264,7 +267,7 @@ module Trinidad
 --StopTimeout #{stop_timeout} \
 --Classpath="#{classpath} \
 ++JvmOptions="#{jvm_options}" \
---LogPrefix="#{@trinidad_service_id.downcase}"
+--LogPrefix="#{@service_id.downcase}"
 }
         system "#{srv_path} #{command}"
 
