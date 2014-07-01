@@ -76,7 +76,7 @@ module Trinidad
       def configure_memory_requirements(defaults, java_home)
         return if defaults.key?("configure_memory") && ! defaults["configure_memory"]
 
-        # java_opts = defaults["configure_memory"]
+        # java_opts = defaults["configure_memory"] # TODO
         if defaults["configure_memory"] || ask('Configure JVM memory (JAVA_OPTS)? y/n', 'n') == 'y'
 
           total_memory = defaults["total_memory"] ||
@@ -251,15 +251,20 @@ module Trinidad
           jvm_options << ';' << escape_windows_options(@java_opts)
         end
 
+        stop_timeout = defaults["stop_timeout"] || 5
+
         command = %Q{//IS//#{@trinidad_service_id} --DisplayName="#{@trinidad_name}" \
 --Description="#{@trinidad_service_desc}" \
---Install=#{srv_path} --Jvm=auto --StartMode=jvm --StopMode=jvm \
+--Install=#{srv_path} --Jvm=auto \
+--StartMode=jvm --StopMode=jvm \
 --StartClass=com.msp.procrun.JRubyService --StartMethod=start \
 --StartParams="#{escape_windows_path(@trinidad_daemon_path)};#{trinidad_options}" \
---StopClass=com.msp.procrun.JRubyService --StopMethod=stop --Classpath="#{classpath}" \
+--StopClass=com.msp.procrun.JRubyService --StopMethod=stop \
 --StdOutput=auto --StdError=auto \
---LogPrefix="#{@trinidad_service_id.downcase}" \
-++JvmOptions="#{jvm_options}"
+--StopTimeout #{stop_timeout} \
+--Classpath="#{classpath} \
+++JvmOptions="#{jvm_options}" \
+--LogPrefix="#{@trinidad_service_id.downcase}"
 }
         system "#{srv_path} #{command}"
 
