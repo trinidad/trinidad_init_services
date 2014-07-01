@@ -40,12 +40,12 @@ module Trinidad
         if windows?
           options_ask << ' (separated by `;`)'
 
-          @service_id ||= ask('Service ID? {alphanumeric and underscores only}', 'Trinidad')
+          @service_id ||= ask('Service ID? {alphanumeric and underscores only}', default_service_id)
           name_default = @service_id.gsub('_', ' ')
           @service_name ||= ask('Service (display) name? {alphanumeric and spaces only}', name_default)
           @service_desc ||= ask('Service description? {alphanumeric and spaces only}', SERVICE_DESC)
         else
-          @service_id ||= 'Trinidad'
+          @service_id ||= default_service_id
           @service_name ||= @service_id
           @service_desc ||= SERVICE_DESC
         end
@@ -69,15 +69,14 @@ module Trinidad
           @trinidad_opts.flatten! # split: 'opt' -> [ 'opt' ]
         end
 
-        @jruby_home = defaults["jruby_home"] || ask_path('JRuby home', default_jruby_home)
+        @jruby_home = defaults['jruby_home'] || ask_path('JRuby home', default_jruby_home)
         @ruby_compat_version = defaults["ruby_compat_version"] || default_ruby_compat_version
         @jruby_opts = configure_jruby_opts(@jruby_home, @ruby_compat_version)
         initialize_paths(@jruby_home)
 
-        @java_home = defaults["java_home"] || # only asking on *NIX, so far :
-          ( windows? ? default_java_home : ask_path('Java home', default_java_home) )
+        @java_home = defaults['java_home'] || ask_path('Java home', default_java_home)
 
-        @java_opts = defaults["java_opts"] || []
+        @java_opts = defaults['java_opts'] || []
         @java_opts = @java_opts.strip if @java_opts.is_a?(String)
 
         # can be disabled with *configure_memory: false*
@@ -92,12 +91,12 @@ module Trinidad
       MEMORY_DEFAULT = 720
 
       def configure_memory_requirements(defaults, java_home)
-        return if defaults.key?("configure_memory") && ! defaults["configure_memory"]
+        return if defaults.key?('configure_memory') && ! defaults['configure_memory']
 
         # java_opts = defaults["configure_memory"] # TODO
-        if defaults["configure_memory"] || ask('Configure JVM memory (JAVA_OPTS)? y/n', 'n') == 'y'
+        if defaults['configure_memory'] || ask('Configure JVM memory (JAVA_OPTS)? y/n', 'n') == 'y'
 
-          total_memory = defaults["total_memory"] ||
+          total_memory = defaults['total_memory'] ||
             ask('Total (max) memory dedicated to Trinidad? (in MB)', MEMORY_DEFAULT)
           total_memory = total_memory.to_i
           if total_memory <= 0
@@ -120,7 +119,7 @@ module Trinidad
 
             heap_size = total_memory - cache_size
 
-            if ! defaults.key?("hot_deployment") || ! defaults["hot_deployment"]
+            if ! defaults.key?('hot_deployment') || ! defaults['hot_deployment']
               hot_deploy = ask('Support hot (re-)deployment? y/n', 'n') == 'y'
             else
               hot_deploy = true
@@ -137,8 +136,10 @@ module Trinidad
               meta_size = heap_size / 5 # 20% (unlimited by default)
               meta_size = min(heap_size / 4, meta_size + 100) if hot_deploy
 
-              meta = ask('Confirm meta-space size limit: (-XX:MaxMetaspaceSize in MB)', meta_size)
-              meta_size = parse_memory_setting(meta, meta_size)
+              unless defaults['total_memory'] # do not ask if configured
+                meta = ask('Confirm meta-space size limit: (-XX:MaxMetaspaceSize in MB)', meta_size)
+                meta_size = parse_memory_setting(meta, meta_size)
+              end
 
               add_java_opt('-XX:MaxMetaspaceSize=', "#{meta_size}m") if meta_size
               heap_size -= meta_size.to_i
@@ -146,8 +147,10 @@ module Trinidad
               perm_size = heap_size / 5 # 20%
               perm_size = min(heap_size / 4, perm_size + 100) if hot_deploy
 
-              perm = ask('Confirm perm-gen size limit: (-XX:MaxPermSize in MB)', perm_size)
-              perm_size = parse_memory_setting(perm, perm_size)
+              unless defaults['total_memory'] # do not ask if configured
+                perm = ask('Confirm perm-gen size limit: (-XX:MaxPermSize in MB)', perm_size)
+                perm_size = parse_memory_setting(perm, perm_size)
+              end
 
               add_java_opt('-XX:MaxPermSize=', "#{perm_size}m") if perm_size
               heap_size -= perm_size.to_i
@@ -233,13 +236,19 @@ module Trinidad
           ), nil, '-' # safe_level=nil, trim_mode=nil
         ).result(binding)
 
-        say "moving trinidad to #{@output_path}"
-        trinidad_file = File.join(@output_path, "trinidad")
-        File.open(trinidad_file, 'w') { |file| file.write(daemon) }
-        FileUtils.chmod @run_user.empty? ? 0744 : 0755, trinidad_file
+        service_file = File.join(@output_path, @service_id ||= 'trinidad')
+        File.open(service_file, 'w') { |file| file.write(daemon) } # TODO try super || at least /tmp ?
+        FileUtils.chmod @run_user.empty? ? 0744 : 0755, service_file
 
-        if @output_path.start_with?('/etc') # TODO
-          "\nNOTE: you might want to: `[sudo] update-rc.d -f #{@output_path} defaults`"
+        if @output_path.start_with?('/etc')
+          if chkconfig?
+            command = "chkconfig #{@service_id} on"
+          else
+            command = "update-rc.d -f #{@service_id} remove"
+          end
+          unless exec_system(command, :allow_failure)
+            warn "\nNOTE: please run `#{command}` as a super-used to enable service"
+          end
         end
       end
 
@@ -254,7 +263,17 @@ module Trinidad
           jvm_options << ';' << escape_windows_options(@java_opts)
         end
 
-        stop_timeout = defaults["stop_timeout"] || 5
+        stop_timeout = defaults['stop_timeout'] || 5
+
+        # //TS  Run the service as a console application
+        #       This is the default operation (if no option is provided).
+        # //RS  Run the service 	Called only from ServiceManager
+        # //ES  Start (execute) the service
+        # //SS  Stop the service
+        # //US  Update service parameters
+        # //IS  Install service
+        # //DS  Delete service 	Stops the service first if it is currently running
+        # //PP[//seconds]  Pause 	Default is 60 seconds
 
         command = %Q{//IS//#{@service_id} --DisplayName="#{@service_name}" \
 --Description="#{@service_desc}" \
@@ -264,42 +283,74 @@ module Trinidad
 --StartParams="#{escape_windows_path(@trinidad_daemon_path)};#{trinidad_options}" \
 --StopClass=com.msp.procrun.JRubyService --StopMethod=stop \
 --StdOutput=auto --StdError=auto \
---StopTimeout #{stop_timeout} \
+--StopTimeout=#{stop_timeout} \
 --Classpath="#{classpath} \
 ++JvmOptions="#{jvm_options}" \
 --LogPrefix="#{@service_id.downcase}"
 }
-        system "#{srv_path} #{command}"
+        exec_system "#{srv_path} #{command}"
 
-        "\nNOTE: you may use prunsrv to manage your service, try running:\n" +
+        # TODO --Startup=manual HINT
+
+        "\nhint: you may use prunsrv to manage your service, try running:\n" <<
         "#{srv_path} help"
       end
 
-      def uninstall(service)
+      def uninstall(service = nil)
+        initialize_paths
+        service ||= default_service_id
         windows? ? uninstall_windows_service(service) : uninstall_unix_daemon(service)
       end
 
       def uninstall_windows_service(service_name)
         srv_path = detect_prunsrv_path
-        system "#{srv_path} stop #{service_name}"
-        system "#{srv_path} delete #{service_name}"
+        exec_system "#{srv_path} stop #{service_name}", :allow_failure
+        exec_system "#{srv_path} delete #{service_name}"
       end
 
       def uninstall_unix_daemon(service)
-        name = File.basename(service) # e.g. /etc/init.d/trinidad
-        command = "update-rc.d -f #{name} remove"
-        system command
-      rescue => e
-        say "uninstall failed, try `sudo #{command}`"
-        raise e
-      ensure
         unless File.exist?(service)
           service = File.expand_path(service, '/etc/init.d')
         end
+        name = File.basename(service) # e.g. /etc/init.d/trinidad
+
+        unless service_listed_unix?(service)
+          warn "service '#{service}' seems to be NOT installed/configured"
+        end
+
+        if chkconfig?
+          exec_system command = "chkconfig #{name} stop", :allow_failure
+          exec_system command = "chkconfig #{name} off"
+        else # assuming Debian based
+          exec_system command = "service #{name} stop", :allow_failure
+          exec_system command = "update-rc.d -f #{name} remove"
+        end
+      rescue => e
+        say "uninstall failed, maybe try running `#{command}` as super-user"
+        raise e
+      else
         FileUtils.rm(service) if File.exist?(service)
       end
 
+      def service_listed_unix?(service)
+        if chkconfig?
+          ! `chkconfig --list | grep #{service}`.chomp.empty?
+        else
+          ! `service --status-all | grep #{service}`.chomp.empty?
+        end
+      end
+
       private
+
+      def exec_system(command, allow_failure = nil)
+        say command
+        ok = system command
+        unless allow_failure
+          raise "could not execute `#{command}`" if ok.nil?
+          raise "`#{command}` failed" unless ok
+        end
+        ok
+      end
 
       def escape_windows_path(path)
         path.gsub(%r{/}, '\\')
@@ -327,6 +378,13 @@ module Trinidad
         memory = memory[0...-1] if memory.is_a?(String) && memory =~ /m$/i
         memory
       end
+
+      def chkconfig? # available in RH based distributions
+        return @chkconfig unless (@chkconfig ||= nil).nil?
+        @chkconfig = ! `which chkconfig`.chomp.empty?
+      end
+
+      def default_service_id; windows? ? 'Trinidad' : 'trinidad' end
 
       def default_jruby_home; current_jruby_home end
 
@@ -476,9 +534,9 @@ module Trinidad
         # "amd64", "i386", "x86", "x86_64"
         path = 'windows'
         if arch =~ /amd64/i # amd64
-          path += '/amd64'
+          path << '/amd64'
         elsif arch =~ /64/i # x86_64
-          path += '/ia64'
+          path << '/ia64'
         # else "i386", "x86"
         end
         File.join(@jars_path, path, 'prunsrv.exe')

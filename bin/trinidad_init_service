@@ -12,12 +12,12 @@ configuration = Trinidad::InitServices::Configuration.new
 
 opts = OptionParser.new do |opts|
   opts.banner = "Usage: #{File.basename(__FILE__)} [options] [defaults]"
-  
+
   opts.on('-h', '--help', 'print this help') do
     puts opts
     exit
   end
-  
+
   opts.on('-v', '--version', 'print version') do
     begin
       require 'trinidad'
@@ -31,7 +31,7 @@ opts = OptionParser.new do |opts|
   opts.on('-d', '--defaults YAML_FILE', 'use passed file as defaults') do |config|
     defaults = config
   end
-  
+
   opts.on('-s', '--silent', 'do not print output on console') do
     configuration.say = false
   end
@@ -40,11 +40,11 @@ opts = OptionParser.new do |opts|
     configuration.ask = false
   end
 
-  opts.on('--uninstall NAME', 'remove installed init service') do |name|
+  opts.on('--uninstall [NAME]', 'remove installed init service') do |name|
     configuration.uninstall(name)
     exit(0)
   end
-  
+
 end
 
 opts.parse! ARGV
