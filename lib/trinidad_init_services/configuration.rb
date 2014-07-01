@@ -23,7 +23,9 @@ module Trinidad
       def configure(defaults = {})
         if ( @app_path = defaults["app_path"] ).nil?
           unless @base_path = defaults["base_path"]
-            @app_path = ask_path('Application (base - in case of multiple apps) path', false)
+            @app_path = ask_path('Application (base - in case of multiple apps) path', false) do
+              raise "application/base path not provided (try . if current directory is the app)"
+            end
           end
         end
 
@@ -218,7 +220,9 @@ module Trinidad
         File.open(trinidad_file, 'w') { |file| file.write(daemon) }
         FileUtils.chmod @run_user.empty? ? 0744 : 0755, trinidad_file
 
-        "\nNOTE: you might want to: `[sudo] update-rc.d -f #{@output_path} defaults`" if @output_path.start_with?('/etc')
+        if @output_path.start_with?('/etc')
+          "\nNOTE: you might want to: `[sudo] update-rc.d -f #{@output_path} defaults`"
+        end
       end
 
       def collect_windows_opts(options_ask, defaults)
@@ -331,7 +335,10 @@ module Trinidad
       end
 
       def current_java_home?(java_home)
-        java_home == current_java_home
+        java_home == current_java_home || begin
+          real_java_home = java.io.File.new(java_home).canonical_path
+          real_java_home == current_java_home || "#{real_java_home}/jre" == current_java_home
+        end
       end
 
       def current_java_vendor_sun_or_oracle?
@@ -487,7 +494,7 @@ module Trinidad
       def ask_path(question, default = nil)
         path = ask(question, default)
         unless path # nil, false
-          raise "#{question.inspect} not provided!" if path == false
+          block_given? ? yield : raise("#{question.inspect} not provided!") if path == false
           return path # nil
         end
         path.empty? ? path : File.expand_path(path)
