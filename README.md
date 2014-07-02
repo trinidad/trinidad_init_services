@@ -2,13 +2,14 @@
 
 Init services based on Apache [Commons Daemon](http://commons.apache.org/daemon/)
 and [jruby-jsvc](https://github.com/nicobrevin/jruby-jsvc).
+
 Allows you to run Trinidad as an OS daemon, works on Unix and Windows systems.
 
 ## Installation
 
-    $ jruby -S gem install trinidad_init_services
+    $ gem install trinidad_init_services
 
-When the gem is installed the user must launch the installation process:
+When the gem is installed the you launch the installation process :
 
     $ jruby -S trinidad_init_service
 
@@ -16,29 +17,33 @@ This installer guides you through the configuration process and generates a
 init.d script if you are on a Unix system or creates the service if you are
 on a Windows box.
 
-You can optionally provide a YAML configuration file with defaults specified 
+You can optionally provide a YAML configuration file with defaults specified
 for the `trinidad_init_service` command. An example configuration file :
 
-    app_path: "/home/trinidad/myapp/current"
-    ruby_compat_version: RUBY1_9
-    jruby_home: "/opt/jruby"
-    java_home: "/opt/java"
-    output_path: "/etc/init.d"
-    pid_file: "/home/trinidad/myapp/shared/pids/trinidad.pid"
-    log_file: "/home/trinidad/myapp/shared/log/trinidad.log"
-    jsvc_path: "/usr/bin/jsvc"
-    trinidad_options: "-e production"
-    trinidad_name: Trinidad
-    trinidad_service_id: Trinidad # on Windows (defaults to :trinidad_name)
-    trinidad_service_desc: Trinidad Service Description # on Windows (optional)
+```yaml
+app_path: "/home/trinidad/myapp/current"
+ruby_compat_version: RUBY1_9
+#service_id: Trinidad # on Windows (defaults to :trinidad_name)
+#service_desc: Trinidad Service Description # on Windows (optional)
+jruby_home: "/opt/jruby"
+java_home: "/opt/java"
+output_path: "/etc/init.d"
+pid_file: "/home/trinidad/myapp/shared/pids/trinidad.pid"
+log_file: "/home/trinidad/myapp/shared/log/trinidad.log"
+jsvc_path: "/usr/bin/jsvc" # only used on Unix systems
+trinidad_options: "-e production"
+configure_memory: true # will ask you for your memory requirements
+#total_memory: 720 # total dedicated in mega-bytes (assumes configure_memory)
+#hot_deployment: true # whether using hot-deploys (assumes configure_memory)
+```
 
 You can then run the installer like so:
 
     $ trinidad_init_service --defaults trinidad_init_defaults.yml
 
-If any of the required options are not provided in the configuration file, then 
-the installer will prompt you for them. If you're running this as part of an 
-environment initialization script than use the *--no-ask* option or provide 
+If any of the required options are not provided in the configuration file, then
+the installer will prompt you for them. If you're running this as part of an
+environment initialization script than use the *--no-ask* option or provide
 only the defaults file path on the command line (make sure all required options
 are there) :
 
@@ -63,17 +68,17 @@ you. However please note that to build JSVC on Unix you will need :
 
 #### Execution
 
-When the installation process finishes you can use the script generated to launch 
+When the installation process finishes you can use the script generated to launch
 the server as a daemon with the options start|stop|restart, i.e:
 
     $ /etc/init.d/trinidad restart
 
 #### Running as a Non-Root User
 
-By default, the Trinidad server process will run as the same user that ran the 
-`/etc/init.d/trinidad start` command. But the service can be configured to run 
-as a different user. The preferred method for doing this is the `run_user:` 
-attribute in the configuration YAML (or it's corresponding value at the prompt).  
+By default, the Trinidad server process will run as the same user that ran the
+`/etc/init.d/trinidad start` command. But the service can be configured to run
+as a different user. The preferred method for doing this is the `run_user:`
+attribute in the configuration YAML (or it's corresponding value at the prompt).
 For example:
 
     app_path: "/home/trinidad/myapp/current"
@@ -81,7 +86,7 @@ For example:
     run_user: trinidad
     # ...
 
-This causes the the server to run with non-root privileges (it essentially executes 
+This causes the the server to run with non-root privileges (it essentially executes
 as `sudo -u run_user jsvc ...`).
 
 On some platforms, however, it may be required that you use the JSVC `-user` argument.
@@ -89,7 +94,7 @@ This can be configured with the `JSVC_ARGS_EXTRA` environment variable, like thi
 
     JSVC_ARGS_EXTRA="-user myuser" /etc/init.d/trinidad start
 
-It not recommended that you mix the `-user` flag with the `run_user` option !
+It is not recommended that you mix the `-user` flag with the `run_user` option !
 
 #### Uninstall
 
@@ -103,7 +108,7 @@ you can uninstall using :
 
 #### Execution
 
-Open the **Services** panel under **Administrative Tools** and look for a service 
+Open the **Services** panel under **Administrative Tools** and look for a service
 called **Trinidad** (or whatever name you have chosen).
 
 #### Uninstall
@@ -115,5 +120,5 @@ To remove the service you're going to need the service id (name), than run :
 
 ## Copyright
 
-Copyright (c) 2012 [Team Trinidad](https://github.com/trinidad). 
+Copyright (c) 2012-2014 [Team Trinidad](https://github.com/trinidad).
 See LICENSE (http://en.wikipedia.org/wiki/MIT_License) for details.

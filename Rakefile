@@ -5,12 +5,7 @@ rescue LoadError => e
   raise e
 end
 Bundler::GemHelper.install_tasks
-
-#############################################################################
-#
-# Standard tasks
-#
-#############################################################################
+task :gem => :build
 
 task :default => :spec
 
