@@ -205,7 +205,7 @@ describe Trinidad::InitServices::Configuration do
     path.should == File.join(trinidad_libs, 'windows/prunsrv.exe')
   end
 
-  it "configures windows service" do
+  let(:windows_configuration) do
     subject = Trinidad::InitServices::Configuration.new
     subject.instance_eval do
       def windows?; true; end
@@ -213,24 +213,30 @@ describe Trinidad::InitServices::Configuration do
       def system(command); @system_command = command; end
       def system_command; @system_command; end
     end
+    subject
+  end
+
+  it "configures windows service" do
+    subject = windows_configuration
     config_options = {
       'app_path' => "C:/MyApp",
       'ruby_compat_version' => "RUBY1_9",
-      'trinidad_name' => "Trinidad",
-      'trinidad_service_id' => "TrinidadService",
-      'trinidad_service_desc' => "Trinidad Service Description",
+      'service_id' => "TrinidadService",
+      'service_name' => "Trinidad",
+      'service_desc' => "Trinidad Service Description",
       'trinidad_options' => "-e production -p 4242 ",
       'java_home' => "C:/Program Files (x86)/jdk-1.7.0",
       'jruby_home' => "C:/Program Files/jruby",
     }
     subject.configure(config_options)
-    subject.system_command.should_not be nil
-    subject.system_command.should =~ /\/\/IS\/\/TrinidadService/
-    subject.system_command.should =~ /--DisplayName="Trinidad"/
-    subject.system_command.should =~ /--Description="Trinidad Service Description"/
-    subject.system_command.should =~ /--StartParams=".*?\\daemon.rb;--dir;C:\\MyApp;-e;production;-p;4242"/
-    subject.system_command.should =~ /--Classpath=\".*?\\jruby-jsvc.jar;.*?\\commons-daemon.jar;.*?\\jruby.jar/
-    subject.system_command.should =~ %r{
+    ( system_command = subject.system_command ).should_not be nil
+    system_command.should =~ /\/\/IS\/\/TrinidadService/
+    system_command.should =~ /--DisplayName="Trinidad"/
+    system_command.should =~ /--Description="Trinidad Service Description"/
+    system_command.should =~ /--StartParams=".*?\\daemon.rb;--dir;C:\\MyApp;-e;production;-p;4242"/
+    system_command.should =~ /--Classpath=".*?\\jruby-jsvc.jar;.*?\\commons-daemon.jar;.*?\\jruby.jar/
+    system_command.should =~ /--JavaHome="C\:\\Program Files \(x86\)\\jdk-1\.7\.0"/
+    system_command.should =~ %r{
       \+\+JvmOptions="
         -Djruby.home=C:\\Program\ Files\\jruby;
         -Djruby.lib=C:\\Program\ Files\\jruby\\lib;
@@ -239,6 +245,22 @@ describe Trinidad::InitServices::Configuration do
         -Djruby.compat.version=RUBY1_9
       "
     }x
+  end
+
+  it "configures windows service log out/err/pid" do
+    subject = windows_configuration
+    config_options = {
+      'app_path' => "C:/MyApp",
+      'log_path' => "C:/MyApp/log",
+      'out_file' => "C:/MyApp/log/STD.out",
+    }
+    subject.configure(config_options)
+    ( system_command = subject.system_command ).should_not be nil
+    system_command.should =~ /\/\/IS\/\/Trinidad/
+    system_command.should =~ /--DisplayName="Trinidad"/
+    system_command.should =~ /--StdOutput="C\:\\MyApp\\log\\STD.out"/
+    system_command.should =~ /--StdError="C\:\\MyApp\\log\\STD.out"/
+    system_command.should =~ /--PidFile=Trinidad.pid/
   end
 
 	it "ask_path works when non tty and default nil" do

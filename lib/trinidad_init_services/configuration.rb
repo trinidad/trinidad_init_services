@@ -93,7 +93,6 @@ module Trinidad
       def configure_memory_requirements(defaults, java_home)
         return if defaults.key?('configure_memory') && ! defaults['configure_memory']
 
-        # java_opts = defaults["configure_memory"] # TODO
         if defaults['configure_memory'] || ask('Configure JVM memory (JAVA_OPTS)? y/n', 'n') == 'y'
 
           total_memory = defaults['total_memory'] ||
@@ -214,8 +213,8 @@ module Trinidad
           end
         end
 
-        @pid_file = defaults["pid_file"] || ask_path('pid file', '/var/run/trinidad/trinidad.pid')
-        @out_file = defaults["out_file"] || defaults["log_file"] ||
+        @pid_file = defaults['pid_file'] || ask_path('pid file', '/var/run/trinidad/trinidad.pid')
+        @out_file = defaults['out_file'] || defaults['log_file'] ||
           ask_path('out file (where system out/err gets redirected)', '/var/log/trinidad/trinidad.out')
 
         @pid_file = File.join(@pid_file, 'trinidad.pid') if File.exist?(@pid_file) && File.directory?(@pid_file)
@@ -263,7 +262,12 @@ module Trinidad
           jvm_options << ';' << escape_windows_options(@java_opts)
         end
 
-        stop_timeout = defaults['stop_timeout'] || 5
+        log_path = defaults['log_path'] || "%SystemRoot%\\System32\\LogFiles\\#{@service_id}"
+        @out_file = defaults['out_file'] || defaults['log_file'] ||
+          ask_path('out file (where system out/err gets redirected), leave blank for prunsrv default')
+        @pid_file = defaults['pid_file'] || "#{@service_id}.pid"
+
+        #stop_timeout = defaults['stop_timeout'] || 5
 
         # //TS  Run the service as a console application
         #       This is the default operation (if no option is provided).
@@ -275,21 +279,29 @@ module Trinidad
         # //DS  Delete service 	Stops the service first if it is currently running
         # //PP[//seconds]  Pause 	Default is 60 seconds
 
-        command = %Q{//IS//#{@service_id} --DisplayName="#{@service_name}" \
---Description="#{@service_desc}" \
---Install=#{srv_path} --Jvm=auto \
---StartMode=jvm --StopMode=jvm \
---StartClass=com.msp.procrun.JRubyService --StartMethod=start \
---StartParams="#{escape_windows_path(@trinidad_daemon_path)};#{trinidad_options}" \
---StopClass=com.msp.procrun.JRubyService --StopMethod=stop \
---StdOutput=auto --StdError=auto \
---StopTimeout=#{stop_timeout} \
---Classpath="#{classpath} \
-++JvmOptions="#{jvm_options}" \
---LogPrefix="#{@service_id.downcase}"
-}
+        command = %Q{//IS//#{@service_id} --DisplayName="#{@service_name}"}
+        command << " --Description=\"#{@service_desc}\""
+        command << " --Install=#{srv_path} --Jvm=auto"
+        command << " --JavaHome=\"#{escape_windows_path(@java_home)}\""
+        command << " --StartMode=jvm --StopMode=jvm"
+        command << " --StartClass=com.msp.procrun.JRubyService --StartMethod=start"
+        command << " --StartParams=\"#{escape_windows_path(@trinidad_daemon_path)};#{trinidad_options}\""
+        command << " --StopClass=com.msp.procrun.JRubyService --StopMethod=stop"
+        command << " --Classpath=\"#{classpath}\""
+        command << " ++JvmOptions=\"#{jvm_options}\""
+        command << " --LogPath=\"#{escape_windows_path(log_path)}\""
+        command << " --PidFile=#{@pid_file}" # always assumed log_path relative
+
+        if @out_file && ! @out_file.empty?
+          out_file = escape_windows_path(@out_file)
+          command << " --StdOutput=\"#{out_file}\" --StdError=\"#{out_file}\""
+        else
+          command << " --StdOutput=auto --StdError=auto"
+        end
+
         exec_system "#{srv_path} #{command}"
 
+        # --StopTimeout=#{stop_timeout} \
         # TODO --Startup=manual HINT
 
         "\nhint: you may use prunsrv to manage your service, try running:\n" <<
