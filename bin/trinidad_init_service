@@ -10,7 +10,7 @@ require 'optparse'
 defaults = nil
 configuration = Trinidad::InitServices::Configuration.new
 
-opts = OptionParser.new do |opts|
+options = OptionParser.new do |opts|
   opts.banner = "Usage: #{File.basename(__FILE__)} [options] [defaults]"
 
   opts.on('-h', '--help', 'print this help') do
@@ -28,17 +28,21 @@ opts = OptionParser.new do |opts|
     exit(0)
   end
 
-  opts.on('-d', '--defaults YAML_FILE', 'use passed file as defaults') do |config|
-    defaults = config
+  opts.on('-d', '--defaults YAML_FILE', 'use passed file as defaults') do |file|
+    defaults = file
   end
 
-  opts.on('-s', '--silent', 'do not print output on console') do
+  opts.on('-s', '--silent', 'do not print any output on console') do
     configuration.say = false
   end
 
-  opts.on('--no-ask', 'disable interactive (console) mode') do
+  opts.on('-k', '--know', "don't ask (disable interactive mode)") do
     configuration.ask = false
   end
+
+  #opts.on('--no-ask', 'disable interactive (console) mode') do
+  #  configuration.ask = false
+  #end
 
   opts.on('--uninstall [NAME]', 'remove installed init service') do |name|
     configuration.uninstall(name)
@@ -47,7 +51,7 @@ opts = OptionParser.new do |opts|
 
 end
 
-opts.parse! ARGV
+options.parse! ARGV
 
 if ARGV.size > 0 # trinidad_init_service /home/trinidad/defaults.yml
   defaults = ARGV[0]
