@@ -236,18 +236,31 @@ module Trinidad
         ).result(binding)
 
         service_file = File.join(@output_path, @service_id ||= 'trinidad')
-        File.open(service_file, 'w') { |file| file.write(daemon) } # TODO try super || at least /tmp ?
+        begin
+          File.open(service_file, 'w') { |file| file.write(daemon) }
+        rescue Errno::EACCES => e
+          begin
+            service_file = File.basename(service_file) # leave in current WD
+            service_file = File.expand_path(service_file)
+            File.open(service_file, 'w') { |file| file.write(daemon) }
+            warn "#{e.message} left init.d script at #{service_file}"
+          rescue
+            raise e
+          end
+        end
         FileUtils.chmod @run_user.empty? ? 0744 : 0755, service_file
 
-        if @output_path.start_with?('/etc')
+        if service_file.start_with?('/etc')
           if chkconfig?
             command = "chkconfig #{@service_id} on"
           else
             command = "update-rc.d -f #{@service_id} remove"
           end
           unless exec_system(command, :allow_failure)
-            warn "\nNOTE: please run `#{command}` as a super-used to enable service"
+            warn "\nNOTE: run `#{command}` as a super-used to enable service"
           end
+        else
+          warn "\nNOTE: run `cp #{service_file} /etc/init.d` and `#{command}` as a super-used to enable service"
         end
       end
 
@@ -356,12 +369,18 @@ module Trinidad
 
       def exec_system(command, allow_failure = nil)
         say command
+        log && (log.puts "#{command}\n\n"; log.flush)
         ok = system command
         unless allow_failure
           raise "could not execute `#{command}`" if ok.nil?
           raise "`#{command}` failed" unless ok
         end
         ok
+      end
+
+      def log
+        return @_log if defined? @_log
+        @_log = File.open('trinidad_init_service.log', 'w') rescue nil
       end
 
       def escape_windows_path(path)
