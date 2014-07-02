@@ -22,17 +22,18 @@ for the `trinidad_init_service` command. An example configuration file :
 
 ```yaml
 app_path: "/home/trinidad/myapp/current"
-ruby_compat_version: RUBY1_9
+#ruby_compat_version: RUBY1_9
 #service_id: Trinidad # on Windows (defaults to :trinidad_name)
 #service_desc: Trinidad Service Description # on Windows (optional)
-jruby_home: "/opt/jruby"
-java_home: "/opt/java"
-output_path: "/etc/init.d"
-pid_file: "/home/trinidad/myapp/shared/pids/trinidad.pid"
-log_file: "/home/trinidad/myapp/shared/log/trinidad.log"
-jsvc_path: "/usr/bin/jsvc" # only used on Unix systems
-trinidad_options: "-e production"
-configure_memory: true # will ask you for your memory requirements
+jruby_home: /opt/jruby
+java_home: /opt/java
+output_path: /etc/init.d
+pid_file: /home/trinidad/myapp/shared/pids/trinidad.pid
+out_file: /home/trinidad/myapp/shared/log/trinidad.out # std out/err
+jsvc_path: /usr/bin/jsvc # only used on Unix systems
+trinidad_opts: "-e production --threadsafe"
+java_opts: "-server -Xss1248k -XX:CompileThreshold=8000"
+configure_memory: true # asks you for memory requirements (merges java_opts)
 #total_memory: 720 # total dedicated in mega-bytes (assumes configure_memory)
 #hot_deployment: true # whether using hot-deploys (assumes configure_memory)
 ```
@@ -43,11 +44,11 @@ You can then run the installer like so:
 
 If any of the required options are not provided in the configuration file, then
 the installer will prompt you for them. If you're running this as part of an
-environment initialization script than use the *--no-ask* option or provide
+environment initialization script than use the *--know* option or provide
 only the defaults file path on the command line (make sure all required options
 are there) :
 
-    $ jruby -S trinidad_init_service trinidad_init_defaults.yml
+    $ jruby -S trinidad_init_service --know trinidad_init_defaults.yml
 
 
 **NOTE:** Do not confuse the *defaults.yml* "configuration" file with Trinidad's
