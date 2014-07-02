@@ -222,12 +222,12 @@ module Trinidad
         @out_file = File.join(@out_file, 'trinidad.out') if File.exist?(@out_file) && File.directory?(@out_file)
         make_path_dir(@out_file, "could not create dir for '#{@out_file}', make sure dir exists before running daemon")
 
-        @run_user = defaults["run_user"] || ask('run daemon as user (enter a non-root username or leave blank)', '')
+        @run_user = defaults['run_user'] || ask('run daemon as user (enter a non-root username or leave blank)', '')
         if ! @run_user.empty? && `id -u #{@run_user}` == ''
           raise ArgumentError, "user '#{@run_user}' does not exist (leave blank if you're planning to `useradd' later)"
         end
 
-        @output_path = defaults["output_path"] || ask_path('init.d output path', '/etc/init.d')
+        @output_path = defaults['output_path'] || ask_path('init.d output path', '/etc/init.d')
 
         require('erb'); daemon = ERB.new(
           File.read(
@@ -277,7 +277,7 @@ module Trinidad
 
         log_path = defaults['log_path'] || "%SystemRoot%\\System32\\LogFiles\\#{@service_id}"
         @out_file = defaults['out_file'] || defaults['log_file'] ||
-          ask_path('out file (where system out/err gets redirected), leave blank for prunsrv default')
+          ask_path('out file (where system out/err gets redirected), leave blank for prunsrv default', '')
         @pid_file = defaults['pid_file'] || "#{@service_id}.pid"
 
         #stop_timeout = defaults['stop_timeout'] || 5
@@ -292,7 +292,13 @@ module Trinidad
         # //DS  Delete service 	Stops the service first if it is currently running
         # //PP[//seconds]  Pause 	Default is 60 seconds
 
-        command = %Q{//IS//#{@service_id} --DisplayName="#{@service_name}"}
+        if service_listed_windows?(@service_id)
+          say "service '#{@service_id}' already installed, will update instead of install"
+          command = %Q{//US//#{@service_id} --DisplayName="#{@service_name}"}
+        else
+          command = %Q{//IS//#{@service_id} --DisplayName="#{@service_name}"}
+        end
+
         command << " --Description=\"#{@service_desc}\""
         command << " --Install=#{srv_path} --Jvm=auto"
         command << " --JavaHome=\"#{escape_windows_path(@java_home)}\""
@@ -327,10 +333,17 @@ module Trinidad
         windows? ? uninstall_windows_service(service) : uninstall_unix_daemon(service)
       end
 
-      def uninstall_windows_service(service_name)
+      def uninstall_windows_service(service)
         srv_path = detect_prunsrv_path
-        exec_system "#{srv_path} stop #{service_name}", :allow_failure
-        exec_system "#{srv_path} delete #{service_name}"
+        exec_system "#{srv_path} //DS//#{service}" # does stop first if needed
+      end
+
+      def service_listed_windows?(service)
+        # *sc* will allow SERVICE_NAME only (DISPLAY_NAME won't work)
+        out = `sc queryex type= service state= all | find "#{service}"`
+        return false if out.chomp.empty?
+        # "SERVICE_NAME: Trinidad\nDISPLAY_NAME: Trinidad\n"
+        !! out =~ /SERVICE_NAME: #{service}$/i
       end
 
       def uninstall_unix_daemon(service)
@@ -368,8 +381,7 @@ module Trinidad
       private
 
       def exec_system(command, allow_failure = nil)
-        say command
-        log && (log.puts "#{command}\n\n"; log.flush)
+        log_command command
         ok = system command
         unless allow_failure
           raise "could not execute `#{command}`" if ok.nil?
@@ -378,10 +390,17 @@ module Trinidad
         ok
       end
 
-      def log
-        return @_log if defined? @_log
-        @_log = File.open('trinidad_init_service.log', 'w') rescue nil
+      def log_command(command)
+        say command
+        log && (log.puts "#{command}\n\n"; log.flush)
       end
+
+      def log
+        return @_log || nil if defined?(@_log) && ! @_log.nil?
+        ( @_log = File.open('trinidad_init_service.log', 'w') rescue false ) || nil
+      end
+
+      def log?; defined?(@_log) ? !! @_log : nil end
 
       def escape_windows_path(path)
         path.gsub(%r{/}, '\\')
@@ -588,17 +607,18 @@ module Trinidad
         end
       end
 
+      public
+
       def ask_path(question, default = nil)
-        path = ask(question, default)
-        unless path # nil, false
-          block_given? ? yield : raise("#{question.inspect} not provided!") if path == false
-          return path # nil
+        unless path = ask(question, default) # nil, false
+          return path if path.nil?
+          block_given? ? yield : raise("#{question.inspect} not provided!")
         end
         path.empty? ? path : File.expand_path(path)
       end
 
       def ask(question, default = nil)
-        return default if ! @stdin.tty? || @ask == false
+        return default if ! @stdin.tty? || ! ask?
 
         question = "#{question}?" if ! question.index('?') || ! question.index(':')
         question += " [#{default}]" if default &&
@@ -613,27 +633,28 @@ module Trinidad
 
           if result
             result.chomp!
-            case result
-            when /^$/
-              result = default
-            end
+            result = default if result.size == 0
           end
         end
         result
       end
 
-      def ask=(flag)
-        @ask = !!flag
+      def ask?
+        @ask = true unless defined? @ask; return @ask
       end
+
+      def ask=(flag); @ask = !!flag end
       public :ask=
 
       def say(msg)
-        puts msg unless @say == false
+        puts msg if say?
       end
 
-      def say=(flag)
-        @say = !!flag
+      def say?
+        @say = true unless defined? @say; return @say
       end
+
+      def say=(flag); @say = !!flag end
       public :say=
 
     end

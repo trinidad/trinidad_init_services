@@ -23,21 +23,21 @@ describe Trinidad::InitServices::Configuration do
 	it "creates the init.d file" do
     subject.configure config_defaults.merge 'java_home' => 'tmp/java', 'jruby_home' => 'tmp/jruby'
 
-		File.exist?(init_file).should be_true
+		expect( File.exist?(init_file) ).to be true
 
     init_file_content = File.read(init_file)
 
-    init_file_content.match(/JSVC=tmp\/jsvc\/bin\/jsvc/).should be_true
-    init_file_content.match(/JAVA_HOME="tmp\/java"/).should be_true
-    init_file_content.match(/JRUBY_HOME="tmp\/jruby"/).should be_true
-    init_file_content.match(/BASE_PATH="tmp\/app"/).should be_true
+    expect( init_file_content ).to match(/JSVC=tmp\/jsvc\/bin\/jsvc/)
+    expect( init_file_content ).to match(/JAVA_HOME="tmp\/java"/)
+    expect( init_file_content ).to match(/JRUBY_HOME="tmp\/jruby"/)
+    expect( init_file_content ).to match(/BASE_PATH="tmp\/app"/)
 
-    init_file_content.match(/PID_FILE="tmp\/trinidad.pid"/).should be_true
-    init_file_content.match(/OUT_FILE="tmp\/trinidad.out"/).should be_true
+    expect( init_file_content ).to match(/PID_FILE="tmp\/trinidad.pid"/)
+    expect( init_file_content ).to match(/OUT_FILE="tmp\/trinidad.out"/)
 
-    init_file_content.match(/TRINIDAD_OPTS="--dir tmp\/app -e production"/).should be_true
+    expect( init_file_content ).to match(/TRINIDAD_OPTS="--dir tmp\/app -e production"/)
 
-    init_file_content.match(/RUN_USER=""/).should be_true
+    expect( init_file_content ).to match(/RUN_USER=""/)
   end
 
 	it "configures memory requirements using JAVA_OPTS (Java 6)" do
@@ -124,13 +124,13 @@ describe Trinidad::InitServices::Configuration do
       config.merge! 'pid_file' => "tmp/pids/trinidad.pid", 'log_file' => "tmp/logs/trinidad.out"
       subject.configure(config)
 
-      File.exist?(pids_dir).should be_true
-      File.directory?(pids_dir).should be_true
-      Dir.entries(pids_dir).should == ['.', '..']
+      expect( File.exist?(pids_dir) ).to be true
+      expect( File.directory?(pids_dir) ).to be true
+      expect( Dir.entries(pids_dir) ).to eql ['.', '..']
 
-      File.exist?(logs_dir).should be_true
-      File.directory?(logs_dir).should be_true
-      Dir.entries(logs_dir).should == ['.', '..']
+      expect( File.exist?(logs_dir) ).to be true
+      expect( File.directory?(logs_dir) ).to be true
+      expect( Dir.entries(logs_dir) ).to eql ['.', '..']
     ensure
       Dir.rmdir(pids_dir) if File.exist?(pids_dir)
       Dir.rmdir(logs_dir) if File.exist?(logs_dir)
@@ -208,10 +208,12 @@ describe Trinidad::InitServices::Configuration do
   let(:windows_configuration) do
     subject = Trinidad::InitServices::Configuration.new
     subject.instance_eval do
-      def windows?; true; end
-      def macosx?; false; end
-      def system(command); @system_command = command; end
-      def system_command; @system_command; end
+      def windows?; true end
+      def macosx?; false end
+      def service_listed_windows?(service); false end
+      def system(command); @system_command = command end
+      def system_command; @system_command end
+      def log_command(command); end
     end
     subject
   end
@@ -261,6 +263,26 @@ describe Trinidad::InitServices::Configuration do
     system_command.should =~ /--StdOutput="C\:\\MyApp\\log\\STD.out"/
     system_command.should =~ /--StdError="C\:\\MyApp\\log\\STD.out"/
     system_command.should =~ /--PidFile=Trinidad.pid/
+  end
+
+  it "updates windows service when installed" do
+    subject = windows_configuration
+    subject.instance_eval do
+      def service_listed_windows?(service); service == 'Trinidad' end
+    end
+    config_options = {
+      'app_path' => "C:/MyApp",
+    }
+    subject.configure(config_options)
+    ( system_command = subject.system_command ).should_not be nil
+    expect( system_command ).to match /\/\/US\/\/Trinidad/
+  end
+
+  it "uninstalls windows service" do
+    subject = windows_configuration
+    subject.uninstall
+    ( system_command = subject.system_command ).should_not be nil
+    expect( system_command ).to match /\/\/DS\/\/Trinidad/
   end
 
 	it "ask_path works when non tty and default nil" do
