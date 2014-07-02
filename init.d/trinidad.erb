@@ -117,12 +117,18 @@ fi
 if [ -z "$JAVA_OPTS" ] ; then
   JAVA_OPTS="$JAVA_MEM $JAVA_MEM_MIN $JAVA_STACK"
 else
-  if ! echo "$JAVA_OPTS" | grep "\-Xmx" ; then
-    JAVA_OPTS="$JAVA_OPTS $JAVA_MEM $JAVA_MEM_MIN"
-  fi
-  if ! echo "$JAVA_OPTS" | grep "\-Xss" ; then
-    JAVA_OPTS="$JAVA_OPTS $JAVA_STACK"
-  fi
+  for opt in Xmx Xss; do
+    if case ${JAVA_OPTS} in *"-${opt}"*) true;; *) false;; esac ; then
+      # JAVA_OPTS contains option - do no thing
+    else
+      if [ "${opt}" == "Xmx" ] ; then
+        JAVA_OPTS="$JAVA_OPTS $JAVA_MEM $JAVA_MEM_MIN"
+      fi
+      if [ "${opt}" == "Xss" ] ; then
+        JAVA_OPTS="$JAVA_OPTS $JAVA_STACK"
+      fi
+    fi
+  done
 fi
 
 JAVA_OPTS="$JAVA_OPTS -Xbootclasspath/a:$JRUBY_HOME/lib/jruby.jar"
