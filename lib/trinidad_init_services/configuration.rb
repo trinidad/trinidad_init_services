@@ -131,7 +131,7 @@ module Trinidad
             end
 
             if current_java_version_at_least_8?
-              # NOTE: probably a good idea to limit meta-space size :
+              # probably a good idea to limit meta-space size :
               meta_size = heap_size / 5 # 20% (unlimited by default)
               meta_size = min(heap_size / 4, meta_size + 100) if hot_deploy
 
@@ -250,12 +250,12 @@ module Trinidad
         end
         FileUtils.chmod @run_user.empty? ? 0744 : 0755, service_file
 
+        if chkconfig?
+          command = "chkconfig #{@service_id} on"
+        else
+          command = "update-rc.d -f #{@service_id} remove"
+        end
         if service_file.start_with?('/etc')
-          if chkconfig?
-            command = "chkconfig #{@service_id} on"
-          else
-            command = "update-rc.d -f #{@service_id} remove"
-          end
           unless exec_system(command, :allow_failure)
             warn "\nNOTE: run `#{command}` as a super-used to enable service"
           end
@@ -323,7 +323,7 @@ module Trinidad
         # --StopTimeout=#{stop_timeout} \
         # TODO --Startup=manual HINT
 
-        "\nhint: you may use prunsrv to manage your service, try running:\n" <<
+        "\nHINT: you may use prunsrv to manage your service, try running:\n" <<
         "#{srv_path} help"
       end
 
@@ -489,7 +489,7 @@ module Trinidad
       def default_ruby_compat_version; current_ruby_compat_version end
 
       def current_ruby_compat_version
-        # NOTE: deprecated on 9k but still working (returns RUBY2_1)
+        # deprecated on 9k but still working (returns RUBY2_1)
         JRuby.runtime.getInstanceConfig.getCompatVersion.to_s
       end
 
