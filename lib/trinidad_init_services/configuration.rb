@@ -301,7 +301,7 @@ module Trinidad
 
         command << " --Description=\"#{@service_desc}\""
         command << " --Install=#{srv_path} --Jvm=auto"
-        command << " --JavaHome=\"#{escape_windows_path(@java_home)}\""
+        command << " --JavaHome=\"#{escape_windows_path(java_home)}\""
         command << " --StartMode=jvm --StopMode=jvm"
         command << " --StartClass=com.msp.procrun.JRubyService --StartMethod=start"
         command << " --StartParams=\"#{escape_windows_path(@trinidad_daemon_path)};#{trinidad_options}\""
@@ -320,11 +320,10 @@ module Trinidad
 
         exec_system "#{srv_path} #{command}"
 
-        # --StopTimeout=#{stop_timeout} \
-        # TODO --Startup=manual HINT
+        warn "\nNOTE: service needs to be started manually, to start during boot run:\n" <<
+          "#{srv_path} //US//#{@service_id} --Startup=auto"
 
-        "\nHINT: you may use prunsrv to manage your service, try running:\n" <<
-        "#{srv_path} help"
+        "\nHINT: you may use prunsrv to manage your service, try running:\n#{srv_path} help"
       end
 
       def uninstall(service = nil)
