@@ -342,7 +342,7 @@ module Trinidad
         out = `sc queryex type= service state= all | find "#{service}"`
         return false if out.chomp.empty?
         # "SERVICE_NAME: Trinidad\nDISPLAY_NAME: Trinidad\n"
-        !! out =~ /SERVICE_NAME: #{service}$/i
+        !! ( out =~ /SERVICE_NAME: #{service}$/i )
       end
 
       def uninstall_unix_daemon(service)
