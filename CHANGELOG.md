@@ -1,5 +1,10 @@
-## 1.3.0 (pend-ii-ng)
+## 1.3.0 (2014-07-03)
 
+* `--no-ask` is now known as `--know`
+* (portable) shell sub-string matching without echo
+* do a service update when already installed (on windoze) + better removal
+* include a service trinidad_init_service.log file of commands executed
+* configure out redirection as well as pid file (+ log path) on windoze
 * fix uninstall failing (alwo try supporting RH standarts)
 * revised service id/name/desc configuration (to be 'more' similar on platforms)
 * improved java_home detection and error message

@@ -55,7 +55,7 @@ are there) :
 own configuration (*config/trinidad.yml*) file used when setting up the server !
 
 
-### Unix
+### Linux
 
 #### Requirements
 
@@ -99,8 +99,8 @@ It is not recommended that you mix the `-user` flag with the `run_user` option !
 
 #### Uninstall
 
-Manage as every other rc.d, assuming `update-rc.d -f /etc/init.d/trinidad defaults`
-you can uninstall using :
+manage as every other service (e.g. `update-rc.d -f trinidad defaults` on Ubuntu)
+you can even uninstall (will attempt to delete the script as well) using :
 
     $ [sudo] trinidad_init_service --uninstall /etc/init.d/trinidad
 
@@ -110,14 +110,19 @@ you can uninstall using :
 #### Execution
 
 Open the **Services** panel under **Administrative Tools** and look for a service
-called **Trinidad** (or whatever name you have chosen).
+called **Trinidad** (or whatever name you have chosen) then *Start* it.
+
+By default the service is not setup to auto start during boot, that can be changed
+from the command-line or using  the Windows Services application.
 
 #### Uninstall
 
-To remove the service you're going to need the service id (name), than run :
+on Windows uninstallation requires to pass the service name (if not default) :
 
-    $ trinidad_init_service --uninstall Trinidad
+    $ jruby -S trinidad_init_service --uninstall Trinidad
 
+Please note that when the service gets uninstalled (on Windows) usually a restart
+is needed for it to be installable again.
 
 ## Copyright
 
