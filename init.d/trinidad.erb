@@ -119,7 +119,7 @@ if [ -z "$JAVA_OPTS" ] ; then
 else
   for opt in Xmx Xss; do
     if case ${JAVA_OPTS} in *"-${opt}"*) true;; *) false;; esac ; then
-      # JAVA_OPTS contains option - do no thing
+      : # JAVA_OPTS contains option - do no-thing
     else
       if [ "${opt}" == "Xmx" ] ; then
         JAVA_OPTS="$JAVA_OPTS $JAVA_MEM $JAVA_MEM_MIN"

@@ -1,4 +1,4 @@
-require File.expand_path('spec_helper', File.join(File.dirname(__FILE__), '..'))
+require File.expand_path('../spec_helper', File.dirname(__FILE__))
 
 require 'yaml'
 require 'fileutils'
@@ -15,10 +15,12 @@ describe Trinidad::InitServices::Configuration do
   after :each do
     FileUtils.rm_r init_dir
     Dir.rmdir(tmp_dir) if Dir.entries(tmp_dir) == [ '.', '..' ]
-    ENV_JAVA.update @@env_java
+    ENV_JAVA.clear; ENV_JAVA.update @@env_java
   end
 
   before(:all) { @@env_java = ENV_JAVA.dup }
+
+  before(:each) { subject.ask = false } # do not ask by default
 
 	it "creates the init.d file" do
     subject.configure config_defaults.merge 'java_home' => 'tmp/java', 'jruby_home' => 'tmp/jruby'
@@ -39,6 +41,15 @@ describe Trinidad::InitServices::Configuration do
 
     expect( init_file_content ).to match(/RUN_USER=""/)
   end
+
+	it "creates a (source) valid init.d file" do
+    subject.configure config_defaults.merge 'java_opts' => '-Xmx512M -Xss1024k'
+
+		expect( File.exist?(init_file) ).to be true
+
+    fail('not a valid bash source (see output above)') unless system "bash -n #{init_file}"
+
+  end unless (`which bash` rescue '').chomp.empty?
 
 	it "configures memory requirements using JAVA_OPTS (Java 6)" do
     ENV_JAVA['java.version'] = '1.6.0_43'
