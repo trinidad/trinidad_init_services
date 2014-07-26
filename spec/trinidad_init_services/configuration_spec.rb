@@ -222,7 +222,7 @@ describe Trinidad::InitServices::Configuration do
     subject = windows_configuration
     config_options = {
       'app_path' => "C:/MyApp",
-      'ruby_compat_version' => "RUBY1_9",
+      'ruby_compat_version' => "1.9",
       'service_id' => "TrinidadService",
       'service_name' => "Trinidad",
       'service_desc' => "Trinidad Service Description",

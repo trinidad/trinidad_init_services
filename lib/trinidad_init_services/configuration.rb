@@ -70,7 +70,8 @@ module Trinidad
         end
 
         @jruby_home = defaults['jruby_home'] || ask_path('JRuby home', default_jruby_home)
-        @ruby_compat_version = defaults["ruby_compat_version"] || default_ruby_compat_version
+        ruby_compat_version = defaults['ruby_compat_version'] || default_ruby_compat_version
+        @ruby_compat_version = normalize_ruby_compat_version(ruby_compat_version)
         @jruby_opts = configure_jruby_opts(@jruby_home, @ruby_compat_version)
         initialize_paths(@jruby_home)
 
@@ -486,6 +487,14 @@ module Trinidad
       end
 
       def default_ruby_compat_version; current_ruby_compat_version end
+
+      def normalize_ruby_compat_version(version)
+        # e.g. '2.0' -> 'RUBY2_0'
+        if version.start_with?('RUBY')
+          version = version[4..-1]
+        end
+        "RUBY#{version.sub('.','_')}"
+      end
 
       def current_ruby_compat_version
         # deprecated on 9k but still working (returns RUBY2_1)
