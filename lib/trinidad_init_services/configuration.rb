@@ -254,7 +254,7 @@ module Trinidad
         if chkconfig?
           command = "chkconfig #{@service_id} on"
         else
-          command = "update-rc.d -f #{@service_id} remove"
+          command = "update-rc.d -f #{@service_id} defaults"
         end
         if service_file.start_with?('/etc')
           unless exec_system(command, :allow_failure)
