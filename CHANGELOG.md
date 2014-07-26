@@ -1,3 +1,9 @@
+## 1.3.1 (2014-07-26)
+
+* make sure generated init.d script is valid shell (bash) script ... (fixes #43)
+* fix wrong user instruction for installing service (thanks @davidhq at #43)
+* normalize ruby compat version before setting it (user can input '2.0' now)
+
 ## 1.3.0 (2014-07-03)
 
 * `--no-ask` is now known as `--know`
