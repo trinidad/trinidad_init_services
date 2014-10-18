@@ -224,7 +224,7 @@ module Trinidad
         make_path_dir(@out_file, "could not create dir for '#{@out_file}', make sure dir exists before running daemon")
 
         @run_user = defaults['run_user'] || ask('run daemon as user (enter a non-root username or leave blank)', '')
-        if ! @run_user.empty? && `id -u #{@run_user}` == ''
+        if ! @run_user.empty? && `id #{@run_user}` == ''
           raise ArgumentError, "user '#{@run_user}' does not exist (leave blank if you're planning to `useradd' later)"
         end
 
