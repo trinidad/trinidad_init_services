@@ -87,7 +87,7 @@ For example:
     run_user: trinidad
     # ...
 
-This causes the the server to run with non-root privileges (it essentially executes
+This causes the server to run with non-root privileges (it essentially executes
 as `sudo -u run_user jsvc ...`).
 
 On some platforms, however, it may be required that you use the JSVC `-user` argument.
